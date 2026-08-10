@@ -30,7 +30,7 @@ export const activityService = {
         queryParams.append('cursor', cursor);
       }
 
-      const response = await api.get(`/activity?${queryParams.toString()}`);
+      const response = await api.get(`/api/activity?${queryParams.toString()}`);
       
       return {
         success: true,
@@ -65,7 +65,7 @@ export const activityService = {
       queryParams.append('channel', channel);
       queryParams.append('direction', direction);
 
-      const response = await api.get(`/activity/counts?${queryParams.toString()}`);
+      const response = await api.get(`/api/activity/counts?${queryParams.toString()}`);
       
       return {
         success: true,
