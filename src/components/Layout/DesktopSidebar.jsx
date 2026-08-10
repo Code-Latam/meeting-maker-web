@@ -4,9 +4,10 @@ import { useAuthStore, useUIStore } from '../../store';
 
 const navItems = [
   { id: 'agents', icon: '🤖', label: 'Agents', path: '/' },
+  { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
   { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard' },
   { id: 'boost', icon: '🚀', label: 'Boost', path: '/boost' },
-  { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' }, // ✅ CHANGED: renamed from audit
+  { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' },
   { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
   { id: 'about', icon: 'ℹ️', label: 'About', path: '/about' },
 ];

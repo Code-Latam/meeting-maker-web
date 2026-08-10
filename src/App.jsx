@@ -15,6 +15,7 @@ import { GroupsPerformancePage } from './pages/GroupsPerformancePage';
 import { PersonsPage } from './pages/PersonsPage';
 import { AgentCampaignsPage } from './pages/AgentCampaignsPage';
 import { MarketingCampaignsPage } from './pages/MarketingCampaignsPage';
+import { ActivityTab } from './components/Activity/ActivityTab'; 
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -27,10 +28,11 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/help" element={<HelpPage />} />
-      <Route path="/invoice" element={<InvoicePage />} /> {/* ✅ ADD THIS ROUTE */}
+      <Route path="/invoice" element={<InvoicePage />} />
       <Route path="/" element={<AppLayout />}>
         {/* Main Tabs */}
         <Route index element={<AgentsTab />} />
+        <Route path="activity" element={<ActivityTab />} /> 
         <Route path="dashboard" element={<DashboardTab />} />
         <Route path="boost" element={<BoostTab />} />
         <Route path="ranking" element={<RankingTab />} />
