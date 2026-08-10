@@ -4,6 +4,7 @@ import { useUIStore } from '../../store';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { crmService } from '../../services/crm';
 import { agentsService } from '../../services/agents';
+import { MessageList } from './MessageList';
 
 // Helper to format thread info
 const formatThreadInfo = (thread) => {
@@ -38,6 +39,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   const [agents, setAgents] = useState([]);
   const [groups, setGroups] = useState([]);
   const [dealTypes, setDealTypes] = useState([]);
+  const [messageChannel, setMessageChannel] = useState('all');
 
   // Form states
   const [personType, setPersonType] = useState('prospect');
@@ -453,6 +455,14 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
             }`}
           >
             Deals ({deals.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              activeTab === 'messages' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            💬 Messages
           </button>
         </div>
 
@@ -1040,6 +1050,45 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     Cancel
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* MESSAGES TAB */}
+        {/* ============================================================ */}
+        {activeTab === 'messages' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-gray-700">💬 Conversation History</h4>
+                <span className="text-xs text-gray-400">
+                  (All messages across all channels)
+                </span>
+              </div>
+              {/* Channel filter */}
+              <div className="flex gap-1">
+                {['all', 'linkedin', 'email'].map((ch) => (
+                  <button
+                    key={ch}
+                    onClick={() => setMessageChannel(ch)}
+                    className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                      messageChannel === ch
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {ch === 'all' ? 'All' : ch === 'linkedin' ? '🔗 LinkedIn' : '📧 Email'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {person?._id ? (
+              <MessageList personId={person._id} channel={messageChannel} />
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Loading messages...</p>
               </div>
             )}
           </div>

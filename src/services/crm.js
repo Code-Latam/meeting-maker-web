@@ -374,5 +374,88 @@ export const crmService = {
         error: error.response?.data?.error || 'Failed to load invoice'
       };
     }
+  },
+  // Add this method to the crmService object:
+
+// Get messages for a person (across all threads or a specific channel)
+async getPersonMessages(personId, channel = 'all', cursor = null, limit = 20) {
+  try {
+    // First, get the person with their threads
+    const personResult = await this.getPerson(personId);
+    if (!personResult.success || !personResult.person) {
+      return {
+        success: false,
+        error: personResult.error || 'Failed to get person'
+      };
+    }
+
+    const person = personResult.person;
+    let allMessages = [];
+
+    // Extract messages from threads
+    const threads = person.threads || [];
+    
+    for (const thread of threads) {
+      // Filter by channel if specified
+      if (channel !== 'all' && thread.channel !== channel) {
+        continue;
+      }
+
+      const messages = thread.messages || [];
+      for (const msg of messages) {
+        allMessages.push({
+          ...msg,
+          channel: thread.channel,
+          threadStage: thread.stage,
+          lifecycleState: thread.lifecycle?.state || 'open'
+        });
+      }
+    }
+
+    // Sort by sentAt descending (newest first)
+    allMessages.sort((a, b) => {
+      const dateA = new Date(a.sentAt);
+      const dateB = new Date(b.sentAt);
+      return dateB - dateA;
+    });
+
+    // Apply cursor pagination
+    let startIndex = 0;
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      for (let i = 0; i < allMessages.length; i++) {
+        if (new Date(allMessages[i].sentAt) <= cursorDate) {
+          startIndex = i;
+          break;
+        }
+      }
+    }
+
+    // Slice the array
+    const paginatedMessages = allMessages.slice(startIndex, startIndex + limit + 1);
+    const hasMore = paginatedMessages.length > limit;
+    const messages = paginatedMessages.slice(0, limit);
+    
+    let nextCursor = null;
+    if (hasMore && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      nextCursor = lastMsg.sentAt || null;
+    }
+
+    return {
+      success: true,
+      messages,
+      hasMore,
+      nextCursor,
+      total: allMessages.length
+    };
+
+  } catch (error) {
+    console.error('Error getting person messages:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get messages'
+    };
   }
+},
 };
