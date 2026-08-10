@@ -11,13 +11,13 @@ export function Header() {
   useEffect(() => {
     const fetchClientName = async () => {
       try {
-        // Option 1: If user object has client name
+        // Check if user object has client name
         if (user?.client?.name) {
           setClientName(user.client.name);
           return;
         }
         
-        // Option 2: Fetch from API
+        // Fetch from API if not available
         const response = await api.get('/auth/me');
         if (response.data?.client?.name) {
           setClientName(response.data.client.name);
@@ -32,7 +32,7 @@ export function Header() {
     }
   }, [user]);
 
-  // Get display name
+  // Get display name - prioritize client name
   const displayName = clientName || user?.client?.name || user?.email || 'User';
 
   return (
