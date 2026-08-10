@@ -117,10 +117,9 @@ export const crmService = {
     }
   },
 
-  // Update deal - ✅ FIXED: Use PUT with proper data format
+  // Update deal
   async updateDeal(dealId, updates) {
     try {
-      // Make sure we're sending the right format
       const payload = {
         name: updates.name,
         description: updates.description || '',
@@ -186,6 +185,148 @@ export const crmService = {
   },
 
   // ============================================================
+  // PERSON MANAGEMENT
+  // ============================================================
+
+  // Get a single person by ID
+  async getPerson(personId) {
+    try {
+      const response = await api.get(`/people/${personId}`);
+      return { success: true, person: response.data.person };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get person'
+      };
+    }
+  },
+
+  // Lookup person by linkedin public ID
+  async lookupPerson(linkedinPublicId) {
+    try {
+      const response = await api.get(`/people/lookup?publicId=${linkedinPublicId}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to lookup person'
+      };
+    }
+  },
+
+  // Update person
+  async updatePerson(personId, updates) {
+    try {
+      const response = await api.patch(`/people/${personId}`, updates);
+      return { success: true, person: response.data.person };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to update person'
+      };
+    }
+  },
+
+  // Update lifecycle state for a specific channel
+  async updateLifecycleState(personId, channel, state, reason) {
+    try {
+      const response = await api.patch(`/people/${personId}/threads/${channel}/lifecycle`, {
+        state,
+        reason: reason || 'manual_update'
+      });
+      return { success: true, thread: response.data.thread, person: response.data.person };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to update lifecycle state'
+      };
+    }
+  },
+
+  // Update email channel
+  async updateEmailChannel(personId, email) {
+    try {
+      const response = await api.patch(`/people/${personId}/channels/email`, {
+        identifiers: { email }
+      });
+      return { success: true, person: response.data.person };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to update email'
+      };
+    }
+  },
+
+  // Update email lifecycle
+  async updateEmailLifecycle(personId, state, reason) {
+    try {
+      const response = await api.patch(`/people/${personId}/threads/email/lifecycle`, {
+        state,
+        reason: reason || 'manual_update'
+      });
+      return { success: true, thread: response.data.thread };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to update email lifecycle'
+      };
+    }
+  },
+
+  // Get groups for an agent
+  async getGroups(agentId) {
+    try {
+      const response = await api.get(`/people/agent/${agentId}/groups`);
+      return { success: true, groups: response.data.groups || [] };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get groups'
+      };
+    }
+  },
+
+  // Create a group
+  async createGroup(name) {
+    try {
+      const response = await api.post('/groups/resolve', { name });
+      return { success: true, group: response.data.group };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to create group'
+      };
+    }
+  },
+
+  // Get deals for a person
+  async getDealsForPerson(personId) {
+    try {
+      const response = await api.get(`/deals?personId=${personId}`);
+      return { success: true, deals: response.data.data || [] };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get deals'
+      };
+    }
+  },
+
+  // Delete a deal
+  async deleteDeal(dealId) {
+    try {
+      await api.delete(`/deals/${dealId}`);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to delete deal'
+      };
+    }
+  },
+
+  // ============================================================
   // FINANCE
   // ============================================================
   
@@ -195,6 +336,7 @@ export const crmService = {
       const response = await api.get('/finance/dashboard');
       return { success: true, data: response.data.data };
     } catch (error) {
+      console.error('Error fetching finance data:', error);
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to load finance data'
@@ -206,8 +348,13 @@ export const crmService = {
   async createCheckoutSession() {
     try {
       const response = await api.post('/finance/create-checkout-session');
-      return { success: true, url: response.data.url, amount: response.data.amount };
+      return { 
+        success: true, 
+        url: response.data.url, 
+        amount: response.data.amount 
+      };
     } catch (error) {
+      console.error('Error creating checkout session:', error);
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to create payment session'
@@ -215,55 +362,17 @@ export const crmService = {
     }
   },
 
-  // Add these methods to the existing crmService object
-
-// ============================================================
-// FINANCE
-// ============================================================
-  
-// Get finance dashboard
-async getFinanceDashboard() {
-  try {
-    const response = await api.get('/finance/dashboard');
-    return { success: true, data: response.data.data };
-  } catch (error) {
-    console.error('Error fetching finance data:', error);
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Failed to load finance data'
-    };
+  // Get invoice by ID
+  async getInvoice(invoiceId) {
+    try {
+      const response = await api.get(`/finance/invoices/${invoiceId}`);
+      return { success: true, invoice: response.data.data };
+    } catch (error) {
+      console.error('Error fetching invoice:', error);
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to load invoice'
+      };
+    }
   }
-},
-
-// Create checkout session for payment
-async createCheckoutSession() {
-  try {
-    const response = await api.post('/finance/create-checkout-session');
-    return { 
-      success: true, 
-      url: response.data.url, 
-      amount: response.data.amount 
-    };
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Failed to create payment session'
-    };
-  }
-},
-
-// Get invoice by ID
-async getInvoice(invoiceId) {
-  try {
-    const response = await api.get(`/finance/invoices/${invoiceId}`);
-    return { success: true, invoice: response.data.data };
-  } catch (error) {
-    console.error('Error fetching invoice:', error);
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Failed to load invoice'
-    };
-  }
-}
 };

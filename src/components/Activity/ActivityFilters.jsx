@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const TIME_RANGES = [
   { value: 'today', label: 'Today' },
@@ -24,14 +24,74 @@ export function ActivityFilters({
   timeRange,
   channel,
   direction,
+  searchQuery,
   onTimeRangeChange,
   onChannelChange,
   onDirectionChange,
+  onSearchChange,
   counts = null,
   className = ''
 }) {
+  const [localSearch, setLocalSearch] = useState(searchQuery || '');
+  const searchTimeout = useRef(null);
+
+  // Update local search when prop changes
+  useEffect(() => {
+    setLocalSearch(searchQuery || '');
+  }, [searchQuery]);
+
+  const handleSearchInput = (e) => {
+    const value = e.target.value;
+    setLocalSearch(value);
+
+    // Debounce search
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    searchTimeout.current = setTimeout(() => {
+      onSearchChange(value);
+    }, 300);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+      onSearchChange(localSearch);
+    }
+  };
+
+  const clearSearch = () => {
+    setLocalSearch('');
+    onSearchChange('');
+  };
+
   return (
     <div className={`space-y-3 ${className}`}>
+      {/* Search Bar */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <span className="text-gray-400">🔍</span>
+        </div>
+        <input
+          type="text"
+          value={localSearch}
+          onChange={handleSearchInput}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search by person name..."
+          className="w-full pl-9 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+        />
+        {localSearch && (
+          <button
+            onClick={clearSearch}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       {/* Time Range */}
       <div className="flex flex-wrap gap-1.5">
         {TIME_RANGES.map((range) => {

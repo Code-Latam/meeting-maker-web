@@ -9,6 +9,7 @@ export const activityService = {
    * @param {string} params.timeRange - 'today' | 'yesterday' | 'last_3_days' | 'last_7_days' | 'last_30_days' (default: 'last_7_days')
    * @param {number} params.limit - Number of activities (default: 20, max: 100)
    * @param {string} params.cursor - ISO date string for pagination
+   * @param {string} params.search - Search query for person name (optional)
    * @returns {Promise<Object>} Activity data with pagination
    */
   async fetchActivity(params = {}) {
@@ -18,7 +19,8 @@ export const activityService = {
         direction = 'all',
         timeRange = 'last_7_days',
         limit = 20,
-        cursor = null
+        cursor = null,
+        search = ''
       } = params;
 
       const queryParams = new URLSearchParams();
@@ -28,6 +30,9 @@ export const activityService = {
       queryParams.append('limit', limit.toString());
       if (cursor) {
         queryParams.append('cursor', cursor);
+      }
+      if (search && search.trim()) {
+        queryParams.append('search', search.trim());
       }
 
       const response = await api.get(`/api/activity?${queryParams.toString()}`);

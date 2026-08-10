@@ -13,7 +13,9 @@ export function ActivityCard({ activity, onClick }) {
     authorType,
     agentId,
     personId,
-    linkedinPublicId
+    linkedinPublicId,
+    threadStage,
+    lifecycleState
   } = activity;
 
   const directionIcon = activityService.getDirectionIcon(direction);
@@ -35,9 +37,25 @@ export function ActivityCard({ activity, onClick }) {
       return '👤 Prospect';
     }
     if (authorType === 'agent') {
-      return `🤖 Agent${agentId ? '' : ''}`;
+      return `🤖 Agent`;
     }
     return '💬 System';
+  };
+
+  const getLifecycleStateLabel = (state) => {
+    const stateMap = {
+      'open': 'Open',
+      'connected': 'Connected',
+      'pending-connection': 'Pending Connection',
+      'in-conversation': 'In Conversation',
+      'paused': 'Paused',
+      'converted': 'Converted',
+      'irrelevant': 'Irrelevant',
+      'do_not_contact': 'Do Not Contact',
+      'archived': 'Archived',
+      'blocked': 'Blocked'
+    };
+    return stateMap[state] || state || 'Unknown';
   };
 
   const getLinkedInUrl = () => {
@@ -51,7 +69,7 @@ export function ActivityCard({ activity, onClick }) {
 
   return (
     <div
-      className={`bg-white rounded-xl border ${directionColor} p-4 hover:shadow-md transition-shadow cursor-pointer`}
+      className={`bg-white rounded-xl border ${directionColor} p-4 hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]`}
       onClick={handleClick}
     >
       {/* Header: Person name, time, direction */}
@@ -79,12 +97,22 @@ export function ActivityCard({ activity, onClick }) {
         </div>
       )}
 
-      {/* Message */}
-      <div className="mt-2 text-sm text-gray-700 line-clamp-2">
+      {/* Message - truncated to 2 lines */}
+      <div 
+        className="mt-2 text-sm text-gray-700 overflow-hidden"
+        style={{
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          lineClamp: 2,
+          maxHeight: '3em',
+          wordBreak: 'break-word'
+        }}
+      >
         {truncatedMessage || '(No message content)'}
       </div>
 
-      {/* Footer: Channel, direction, author */}
+      {/* Footer: Channel, direction, author, lifecycle */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
           {channelIcon} {channelLabel}
@@ -95,11 +123,34 @@ export function ActivityCard({ activity, onClick }) {
         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
           {getAuthorLabel()}
         </span>
-        {linkedInUrl && (
-          <span className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
-            🔗 LinkedIn
+        {lifecycleState && (
+          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+            lifecycleState === 'open' ? 'bg-green-100 text-green-700' :
+            lifecycleState === 'converted' ? 'bg-blue-100 text-blue-700' :
+            lifecycleState === 'paused' ? 'bg-yellow-100 text-yellow-700' :
+            lifecycleState === 'do_not_contact' ? 'bg-red-100 text-red-700' :
+            lifecycleState === 'archived' ? 'bg-gray-100 text-gray-500' :
+            'bg-gray-100 text-gray-600'
+          }`}>
+            {getLifecycleStateLabel(lifecycleState)}
           </span>
         )}
+        {linkedInUrl && (
+          <a
+            href={linkedInUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            🔗 LinkedIn
+          </a>
+        )}
+      </div>
+      
+      {/* Click hint */}
+      <div className="mt-2 text-xs text-gray-400 text-center border-t border-gray-100 pt-1">
+        Click to view details
       </div>
     </div>
   );
