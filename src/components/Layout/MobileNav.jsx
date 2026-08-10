@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useUIStore } from '../../store';
+import { useUIStore, useAuthStore } from '../../store';
 import { api } from '../../services/api';
 
 const tabs = [
@@ -17,10 +17,26 @@ export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setActiveTab } = useUIStore();
+  const { user, client } = useAuthStore();
+  const [displayName, setDisplayName] = useState('User');
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
     checking: true
   });
+
+  // Update display name when client or user changes
+  useEffect(() => {
+    const getClientName = () => {
+      if (client?.name) return client.name;
+      if (client?.client?.name) return client.client.name;
+      if (user?.client?.name) return user.client.name;
+      return null;
+    };
+
+    const clientName = getClientName();
+    const newDisplayName = clientName || user?.email || 'User';
+    setDisplayName(newDisplayName);
+  }, [client, user]);
 
   // Check LinkedIn status
   useEffect(() => {
@@ -43,8 +59,6 @@ export function MobileNav() {
     };
 
     checkLinkedInStatus();
-
-    // Check every 60 seconds
     const intervalId = setInterval(checkLinkedInStatus, 60000);
     return () => clearInterval(intervalId);
   }, []);
@@ -83,8 +97,11 @@ export function MobileNav() {
           );
         })}
       </div>
-      {/* LinkedIn Status Dot on Mobile */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+      {/* Client name and LinkedIn Status on Mobile */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        <span className="text-[10px] text-gray-400 truncate max-w-[60px]" title={displayName}>
+          👤{displayName}
+        </span>
         <span className="text-[10px] text-gray-400">🔗</span>
         <span 
           className={`w-2 h-2 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}

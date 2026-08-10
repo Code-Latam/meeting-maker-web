@@ -16,15 +16,30 @@ const navItems = [
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuthStore();
+  const { logout, user, client } = useAuthStore();
   const { isSidebarOpen } = useUIStore();
+  const [displayName, setDisplayName] = useState('Loading...');
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
     status: 'checking',
     checking: true
   });
 
-  // Check LinkedIn status on mount and periodically
+  // Update display name when client or user changes
+  useEffect(() => {
+    const getClientName = () => {
+      if (client?.name) return client.name;
+      if (client?.client?.name) return client.client.name;
+      if (user?.client?.name) return user.client.name;
+      return null;
+    };
+
+    const clientName = getClientName();
+    const newDisplayName = clientName || user?.email || 'User';
+    setDisplayName(newDisplayName);
+  }, [client, user]);
+
+  // Check LinkedIn status
   useEffect(() => {
     let intervalId = null;
     
@@ -48,10 +63,7 @@ export function DesktopSidebar() {
       }
     };
 
-    // Check immediately
     checkLinkedInStatus();
-
-    // Check every 60 seconds
     intervalId = setInterval(checkLinkedInStatus, 60000);
 
     return () => {
@@ -68,13 +80,15 @@ export function DesktopSidebar() {
     return location.pathname === item.path;
   };
 
-  // Get LinkedIn status display
   const getLinkedInStatusDisplay = () => {
     if (linkedinStatus.checking) {
       return { label: 'Checking...', color: 'bg-gray-400', pulse: true };
     }
     if (linkedinStatus.connected) {
-      return { label: 'Connected', color: 'bg-green-500', pulse: false };
+      return { label: 'Connected ✅', color: 'bg-green-500', pulse: false };
+    }
+    if (linkedinStatus.status === 'invalid_session') {
+      return { label: 'Session Invalid', color: 'bg-yellow-500', pulse: false };
     }
     return { label: 'Disconnected', color: 'bg-red-500', pulse: false };
   };
@@ -83,8 +97,11 @@ export function DesktopSidebar() {
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+      {/* Client Name Only */}
       <div className="p-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-primary-600">Meeting Maker</h1>
+        <p className="text-lg font-semibold text-gray-800 truncate" title={displayName}>
+          {displayName}
+        </p>
       </div>
       
       {/* LinkedIn Status */}
@@ -93,7 +110,7 @@ export function DesktopSidebar() {
           <span className="text-xs font-medium text-gray-500">🔗 LinkedIn</span>
           <div className="flex items-center gap-2">
             <span 
-              className={`w-2 h-2 rounded-full ${statusDisplay.color} ${statusDisplay.pulse ? 'animate-pulse' : ''}`}
+              className={`w-2.5 h-2.5 rounded-full ${statusDisplay.color} ${statusDisplay.pulse ? 'animate-pulse' : ''}`}
             />
             <span className="text-xs text-gray-600">{statusDisplay.label}</span>
           </div>
@@ -121,11 +138,14 @@ export function DesktopSidebar() {
       </nav>
       
       <div className="p-4 border-t border-gray-200">
+        <p className="text-xs text-gray-400 text-center mb-2 truncate" title={displayName}>
+          {displayName}
+        </p>
         <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
         >
-          <span className="text-xl">👤</span>
+          <span className="text-xl">🚪</span>
           <span>Logout</span>
         </button>
       </div>

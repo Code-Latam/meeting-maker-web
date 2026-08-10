@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore, useUIStore } from '../../store';
 
 export function Header() {
   const { user, client, logout } = useAuthStore();
   const { isMobile, toggleSidebar } = useUIStore();
+  const [displayName, setDisplayName] = useState('User');
 
-  // Display name - client.name from auth store
-  const displayName = client?.name || user?.email || 'User';
+  // Update display name when client or user changes
+  useEffect(() => {
+    console.log('🔄 Header useEffect - client changed:', client);
+    console.log('🔄 Header useEffect - client?.name:', client?.name);
+    
+    // Get client name from multiple possible locations
+    const getClientName = () => {
+      if (client?.name) return client.name;
+      if (client?.client?.name) return client.client.name;
+      if (user?.client?.name) return user.client.name;
+      return null;
+    };
+
+    const clientName = getClientName();
+    const newDisplayName = clientName || user?.email || 'User';
+    console.log('📝 Setting display name to:', newDisplayName);
+    setDisplayName(newDisplayName);
+  }, [client, user]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 Header Debug:');
+    console.log('  user:', user);
+    console.log('  client:', client);
+    console.log('  client?.name:', client?.name);
+    console.log('  displayName state:', displayName);
+  }, [user, client, displayName]);
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200 safe-top">
