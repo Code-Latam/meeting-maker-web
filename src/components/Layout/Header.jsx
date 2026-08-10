@@ -1,33 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuthStore, useUIStore } from '../../store';
-import { api } from '../../services/api';
 
 export function Header() {
-  const { user, logout } = useAuthStore();
+  const { user, client, logout } = useAuthStore();
   const { isMobile, toggleSidebar } = useUIStore();
-  const [clientName, setClientName] = useState('');
 
-  // Fetch client name from /auth/me endpoint
-  useEffect(() => {
-    const fetchClientName = async () => {
-      try {
-        const response = await api.get('/auth/me');
-        // The client name is at response.data.client.name
-        if (response.data?.client?.name) {
-          setClientName(response.data.client.name);
-        }
-      } catch (error) {
-        console.error('Failed to fetch client name:', error);
-      }
-    };
-
-    if (user) {
-      fetchClientName();
-    }
-  }, [user]);
-
-  // Display name - client.name from API, fallback to user.email
-  const displayName = clientName || user?.email || 'User';
+  // Display name - client.name from auth store
+  const displayName = client?.name || user?.email || 'User';
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200 safe-top">

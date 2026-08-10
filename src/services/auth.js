@@ -8,8 +8,13 @@ export const authService = {
       
       if (response.data.token) {
         localStorage.setItem('jwt', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.client));
-        return { success: true, user: response.data.client };
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('client', JSON.stringify(response.data.client));
+        return { 
+          success: true, 
+          user: response.data.user,
+          client: response.data.client
+        };
       }
       
       return { success: false, error: 'No token received' };
@@ -25,6 +30,7 @@ export const authService = {
   logout() {
     localStorage.removeItem('jwt');
     localStorage.removeItem('user');
+    localStorage.removeItem('client');
     window.location.href = '/login';
   },
 
@@ -52,7 +58,7 @@ export const authService = {
   async getProfile() {
     try {
       const response = await api.get('/auth/me');
-      return { success: true, user: response.data.client };
+      return { success: true, user: response.data.user, client: response.data.client };
     } catch (error) {
       return {
         success: false,

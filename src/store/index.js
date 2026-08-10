@@ -6,7 +6,7 @@ export const useAuthStore = create(
   persist(
     (set, get) => ({
       user: null,
-      client: null, // ✅ ADD client to store
+      client: null,
       token: null,
       isAuthenticated: false,
       isLoading: false,
@@ -17,7 +17,7 @@ export const useAuthStore = create(
         if (result.success) {
           set({
             user: result.user,
-            client: result.client, // ✅ Store client data
+            client: result.client,
             token: localStorage.getItem('jwt'),
             isAuthenticated: true,
             isLoading: false,
@@ -32,7 +32,7 @@ export const useAuthStore = create(
         authService.logout();
         set({ 
           user: null, 
-          client: null, // ✅ Clear client on logout
+          client: null,
           token: null, 
           isAuthenticated: false 
         });
@@ -41,26 +41,33 @@ export const useAuthStore = create(
       checkAuth: () => {
         const token = localStorage.getItem('jwt');
         const user = authService.getCurrentUser();
-        const client = authService.getCurrentClient(); // ✅ Get client from storage
+        // Get client from localStorage directly
+        let client = null;
+        try {
+          const clientData = localStorage.getItem('client');
+          if (clientData) {
+            client = JSON.parse(clientData);
+          }
+        } catch {
+          client = null;
+        }
+        
         if (token && user) {
           set({ 
             user, 
-            client, // ✅ Set client
+            client,
             token, 
             isAuthenticated: true 
           });
         } else {
           set({ 
             user: null, 
-            client: null, 
+            client: null,
             token: null, 
             isAuthenticated: false 
           });
         }
       },
-      
-      // ✅ Method to set client data
-      setClient: (client) => set({ client }),
     }),
     {
       name: 'auth-storage',
