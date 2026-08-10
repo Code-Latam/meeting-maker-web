@@ -7,18 +7,12 @@ export function Header() {
   const { isMobile, toggleSidebar } = useUIStore();
   const [clientName, setClientName] = useState('');
 
-  // Fetch client name when user changes
+  // Fetch client name from /auth/me endpoint
   useEffect(() => {
     const fetchClientName = async () => {
       try {
-        // Check if user object has client name
-        if (user?.client?.name) {
-          setClientName(user.client.name);
-          return;
-        }
-        
-        // Fetch from API if not available
         const response = await api.get('/auth/me');
+        // The client name is at response.data.client.name
         if (response.data?.client?.name) {
           setClientName(response.data.client.name);
         }
@@ -32,8 +26,8 @@ export function Header() {
     }
   }, [user]);
 
-  // Get display name - prioritize client name
-  const displayName = clientName || user?.client?.name || user?.email || 'User';
+  // Display name - client.name from API, fallback to user.email
+  const displayName = clientName || user?.email || 'User';
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200 safe-top">
@@ -60,7 +54,6 @@ export function Header() {
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Show client name on mobile */}
           <span className="sm:hidden text-xs text-gray-500 truncate max-w-[80px]">
             {displayName}
           </span>
