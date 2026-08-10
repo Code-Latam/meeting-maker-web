@@ -6,6 +6,7 @@ export const useAuthStore = create(
   persist(
     (set, get) => ({
       user: null,
+      client: null, // ✅ ADD client to store
       token: null,
       isAuthenticated: false,
       isLoading: false,
@@ -16,6 +17,7 @@ export const useAuthStore = create(
         if (result.success) {
           set({
             user: result.user,
+            client: result.client, // ✅ Store client data
             token: localStorage.getItem('jwt'),
             isAuthenticated: true,
             isLoading: false,
@@ -28,18 +30,37 @@ export const useAuthStore = create(
       
       logout: () => {
         authService.logout();
-        set({ user: null, token: null, isAuthenticated: false });
+        set({ 
+          user: null, 
+          client: null, // ✅ Clear client on logout
+          token: null, 
+          isAuthenticated: false 
+        });
       },
       
       checkAuth: () => {
         const token = localStorage.getItem('jwt');
         const user = authService.getCurrentUser();
+        const client = authService.getCurrentClient(); // ✅ Get client from storage
         if (token && user) {
-          set({ user, token, isAuthenticated: true });
+          set({ 
+            user, 
+            client, // ✅ Set client
+            token, 
+            isAuthenticated: true 
+          });
         } else {
-          set({ user: null, token: null, isAuthenticated: false });
+          set({ 
+            user: null, 
+            client: null, 
+            token: null, 
+            isAuthenticated: false 
+          });
         }
       },
+      
+      // ✅ Method to set client data
+      setClient: (client) => set({ client }),
     }),
     {
       name: 'auth-storage',
@@ -47,7 +68,7 @@ export const useAuthStore = create(
   )
 );
 
-// UI Store (for mobile/desktop state)
+// UI Store
 export const useUIStore = create((set) => ({
   isMobile: window.innerWidth < 1024,
   isSidebarOpen: window.innerWidth >= 1024,
@@ -61,7 +82,7 @@ export const useUIStore = create((set) => ({
   hideToast: () => set({ toast: null }),
 }));
 
-// Handle window resize for mobile detection
+// Handle window resize
 if (typeof window !== 'undefined') {
   window.addEventListener('resize', () => {
     const isMobile = window.innerWidth < 1024;
