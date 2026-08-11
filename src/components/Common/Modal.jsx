@@ -1,7 +1,14 @@
 import React, { useEffect } from 'react';
 import { useUIStore } from '../../store';
 
-export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }) {
+export function Modal({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  maxWidth = 'md',
+  closeOnOutsideClick = true  // ✅ NEW: Allow disabling outside click
+}) {
   const { isMobile } = useUIStore();
 
   useEffect(() => {
@@ -40,7 +47,10 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }) {
       <div 
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
         onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
+          // ✅ Only close if outside click is allowed AND clicking on backdrop
+          if (closeOnOutsideClick && e.target === e.currentTarget) {
+            onClose();
+          }
         }}
       >
         <div className={`bg-white rounded-2xl shadow-2xl ${maxWidthClasses[maxWidth] || maxWidthClasses.md} w-full max-h-[90vh] flex flex-col`}>
@@ -68,7 +78,12 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }) {
     <>
       <div 
         className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={(e) => {
+          // ✅ Only close if outside click is allowed AND clicking on backdrop
+          if (closeOnOutsideClick && e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       />
       <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-slide-up">
         <div className="sticky top-0 bg-white pt-3 pb-1 px-6">

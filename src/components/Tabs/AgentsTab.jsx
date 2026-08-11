@@ -45,10 +45,12 @@ export function AgentsTab() {
       <AgentList onEditAgent={handleEditAgent} />
 
       {/* Agent Form as Bottom Sheet (Mobile) / Modal (Desktop) */}
+      {/* ✅ closeOnOutsideClick={false} prevents accidental closing */}
       <BottomSheet
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         title={editingAgent ? 'Edit Agent' : 'Create Agent'}
+        closeOnOutsideClick={false}
       >
         <AgentForm
           agent={editingAgent}

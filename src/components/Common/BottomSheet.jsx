@@ -1,11 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { useUIStore } from '../../store';
 
-export function BottomSheet({ isOpen, onClose, title, children }) {
+export function BottomSheet({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children,
+  closeOnOutsideClick = true,  // ✅ NEW: Allow disabling outside click
+  className = ''
+}) {
   const { isMobile } = useUIStore();
   const sheetRef = useRef(null);
 
-  // Close on escape key
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -16,7 +22,6 @@ export function BottomSheet({ isOpen, onClose, title, children }) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -36,16 +41,18 @@ export function BottomSheet({ isOpen, onClose, title, children }) {
       <div 
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
         onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
+          if (closeOnOutsideClick && e.target === e.currentTarget) {
+            onClose();
+          }
         }}
       >
-        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className={`bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto ${className}`}>
           {title && (
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
               <button
                 onClick={onClose}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
               >
                 ✕
               </button>
@@ -62,17 +69,18 @@ export function BottomSheet({ isOpen, onClose, title, children }) {
   // Mobile: Show as bottom sheet
   return (
     <>
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={(e) => {
+          if (closeOnOutsideClick && e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       />
-      
-      {/* Sheet */}
       <div className="fixed inset-x-0 bottom-0 z-50">
         <div 
           ref={sheetRef}
-          className="bg-white rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up"
+          className={`bg-white rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up ${className}`}
         >
           {/* Drag handle */}
           <div className="sticky top-0 bg-white pt-3 pb-1 px-6">
@@ -97,7 +105,6 @@ export function BottomSheet({ isOpen, onClose, title, children }) {
         </div>
       </div>
 
-      {/* Animation styles - add to index.css */}
       <style>{`
         @keyframes slideUp {
           from {
