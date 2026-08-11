@@ -124,7 +124,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create New Deal" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Create New Deal" maxWidth="lg" closeOnOutsideClick={false}>
       <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
         {/* Person Search */}
         <div>

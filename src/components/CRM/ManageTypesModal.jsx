@@ -76,7 +76,7 @@ export function ManageTypesModal({ isOpen, dealTypes, onClose, onTypesChange, on
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="🏷️ Manage Deal Types" maxWidth="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="🏷️ Manage Deal Types" maxWidth="md" closeOnOutsideClick={false}>
       <div className="space-y-4">
         {/* Add New Type */}
         <div>

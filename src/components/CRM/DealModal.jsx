@@ -180,7 +180,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
   const isActionsLocked = isLocked;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Deal" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Deal" maxWidth="lg" closeOnOutsideClick={false}>
       <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Deal Name *</label>

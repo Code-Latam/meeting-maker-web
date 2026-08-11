@@ -125,7 +125,13 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="🌐 Website Information" maxWidth="lg">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title="🌐 Website Information" 
+      maxWidth="lg"
+      closeOnOutsideClick={false}  // ✅ Prevent accidental close while typing
+    >
       <div className="space-y-4">
         {/* URL Input */}
         <div>
