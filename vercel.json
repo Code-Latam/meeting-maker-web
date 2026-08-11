@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/cdn-cgi/rum",
-      "destination": "/favicon.svg"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
