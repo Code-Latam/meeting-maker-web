@@ -4,8 +4,10 @@ import { useAuthStore } from '../../store';
 
 export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const isPremium = user?.plan === 'premium';
+  const { user, client } = useAuthStore(); // ✅ Get client from store
+  
+  // ✅ Get plan from client (not user)
+  const isPremium = client?.plan === 'premium';
   const isMarketingManager = agent.role === 'Marketing Manager';
   const isSEO = agent.role === 'SEO Manager';
 
@@ -62,7 +64,7 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
           )}
         </div>
         <div className="flex items-center gap-1">
-        {showCampaignsBtn && (
+          {showCampaignsBtn && (
             <button
               onClick={handleViewCampaigns}
               className="p-1.5 text-gray-400 hover:text-green-500 transition-colors rounded-lg hover:bg-green-50"
@@ -80,7 +82,6 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
               👥
             </button>
           )}
-          
           <button
             onClick={(e) => {
               e.stopPropagation();
