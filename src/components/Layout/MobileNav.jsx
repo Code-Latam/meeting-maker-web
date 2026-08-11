@@ -6,6 +6,7 @@ import { api } from '../../services/api';
 const tabs = [
   { id: 'agents', icon: '🤖', label: 'Agents', path: '/' },
   { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
+  { id: 'conversions', icon: '🎯', label: 'Conversions', path: '/conversions' },
   { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard' },
   { id: 'boost', icon: '🚀', label: 'Boost', path: '/boost' },
   { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' },

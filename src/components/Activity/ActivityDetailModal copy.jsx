@@ -35,7 +35,6 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [person, setPerson] = useState(null);
-  const [personId, setPersonId] = useState(null);
   const [deals, setDeals] = useState([]);
   const [agents, setAgents] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -75,160 +74,28 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   // Tabs
   const [activeTab, setActiveTab] = useState('mm');
 
-  // Sync group from activity data when it becomes available
-  useEffect(() => {
-    if (activity?.group && !loading) {
-      console.log('🔄 Syncing group data from activity:', activity.group);
-      setGroups(prev => {
-        const exists = prev.some(g => g._id === activity.group._id);
-        if (!exists) {
-          return [...prev, activity.group];
-        }
-        return prev;
-      });
-      if (!groupId) {
-        setGroupId(activity.group._id);
-      }
-    }
-  }, [activity?.group, loading, groupId]);
-
   // Load person data
   const loadPersonData = useCallback(async () => {
-    // Try multiple ways to get the person ID
-    let id = null;
-    
-    if (activity?.personId) {
-      id = activity.personId;
-    } else if (activity?.person?.id) {
-      id = activity.person.id;
-    } else if (activity?.person?._id) {
-      id = activity.person._id;
-    } else if (activity?.id) {
-      id = activity.id;
-    } else if (activity?._id) {
-      id = activity._id;
-    }
-    
-    if (!id && activity?.person) {
-      id = activity.person._id || activity.person.id;
-    }
-    
-    console.log('🔍 Extracted personId:', id);
-    
-    if (!id) {
-      console.warn('No personId found in activity:', activity);
-      showToast('Could not find person information', 'error');
-      setLoading(false);
-      return;
-    }
-    
-    setPersonId(id);
+    if (!activity) return;
+
     setLoading(true);
-    
     try {
-      // Check if we already have the data in the activity object
-      let personData = null;
-      let useExistingData = false;
-      
-      // Check if activity has assignedAgentId or groupId
-      if (activity?.assignedAgentId !== undefined || activity?.groupId !== undefined) {
-        personData = {
-          _id: id,
-          fullName: activity.personName || 'Unknown',
-          firstName: activity.personName?.split(' ')[0] || '',
-          lastName: activity.personName?.split(' ').slice(1).join(' ') || '',
-          title: activity.personTitle || '',
-          companyName: activity.personCompany || '',
-          personType: activity.personType || 'prospect',
-          assignedAgentId: activity.assignedAgentId || null,
-          groupId: activity.groupId || null,
-          group: activity.group || null,
-          channelPreference: activity.channelPreference || 'linkedin',
-          linkedinPublicId: activity.linkedinPublicId || '',
-          profile: activity.profile || {},
-          threads: [],
-          channels: [],
-          meeting: activity.meeting || {}
-        };
-        
-        useExistingData = true;
-        
-        // Add the group to the groups list if it exists
-        if (activity.group && activity.group._id) {
-          setGroups([activity.group]);
-          setGroupId(activity.group._id);
-        }
-        
-        setPerson(personData);
-        setPersonType(personData.personType);
-        setAssignedAgentId(personData.assignedAgentId || '');
-        setGroupId(personData.groupId || '');
-        setChannelPreference(personData.channelPreference || 'linkedin');
-      }
-      
-      // Always fetch the full person data for threads and other details
-      const personResult = await crmService.getPerson(id);
-      
+      // Get person details
+      const personResult = await crmService.getPerson(activity.personId);
       if (personResult.success && personResult.person) {
         const p = personResult.person;
-        
-        // Merge the fetched data with existing data
-        if (useExistingData && personData) {
-          const mergedPerson = {
-            ...personData,
-            ...p,
-            assignedAgentId: personData.assignedAgentId || p.assignedAgentId,
-            groupId: personData.groupId || p.groupId,
-            group: personData.group || p.group,
-          };
-          setPerson(mergedPerson);
-          
-          setPersonType(mergedPerson.personType || 'prospect');
-          setAssignedAgentId(mergedPerson.assignedAgentId || '');
-          setGroupId(mergedPerson.groupId || '');
-          setChannelPreference(mergedPerson.channelPreference || 'linkedin');
-          
-          // Update group if fetched data has it
-          if (p.group && p.group._id) {
-            setGroups(prev => {
-              const exists = prev.some(g => g._id === p.group._id);
-              if (!exists) {
-                return [...prev, p.group];
-              }
-              return prev;
-            });
-            if (!groupId) {
-              setGroupId(p.group._id);
-            }
-          }
-        } else {
-          setPerson(p);
-          setPersonType(p.personType || 'prospect');
-          setAssignedAgentId(p.assignedAgentId || '');
-          setGroupId(p.groupId || '');
-          setChannelPreference(p.channelPreference || 'linkedin');
-          
-          // Add group from fetched data
-          if (p.group && p.group._id) {
-            setGroups(prev => {
-              const exists = prev.some(g => g._id === p.group._id);
-              if (!exists) {
-                return [...prev, p.group];
-              }
-              return prev;
-            });
-            setGroupId(p.group._id);
-          }
-        }
-        
-        const finalPerson = personResult.success && personResult.person ? 
-          (useExistingData ? { ...personData, ...personResult.person } : personResult.person) : 
-          personData || personResult.person;
+        setPerson(p);
+        setPersonType(p.personType || 'prospect');
+        setAssignedAgentId(p.assignedAgentId || '');
+        setGroupId(p.groupId || '');
+        setChannelPreference(p.channelPreference || 'linkedin');
 
-        const emailChannel = finalPerson?.channels?.find(c => c.type === 'email');
+        // Get email from channels
+        const emailChannel = p.channels?.find(c => c.type === 'email');
         setEmailAddress(emailChannel?.identifiers?.email || '');
 
-        const linkedinThread = finalPerson?.threads?.find(t => t.channel === 'linkedin');
+        // Get LinkedIn thread info
+        const linkedinThread = p.threads?.find(t => t.channel === 'linkedin');
         if (linkedinThread) {
           setLinkedinThreadInfo(linkedinThread);
           setLinkedinState(linkedinThread.lifecycle?.state || 'open');
@@ -237,7 +104,8 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
           setLinkedinThreadInfo(null);
         }
 
-        const emailThread = finalPerson?.threads?.find(t => t.channel === 'email');
+        // Get Email thread info
+        const emailThread = p.threads?.find(t => t.channel === 'email');
         if (emailThread) {
           setEmailThreadInfo(emailThread);
           setEmailState(emailThread.lifecycle?.state || '');
@@ -248,24 +116,28 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
       }
 
       // Get agents
-      if (agents.length === 0) {
-        const agentsResult = await agentsService.getAgents();
-        if (agentsResult.success) {
-          setAgents(agentsResult.agents || []);
+      const agentsResult = await agentsService.getAgents();
+      if (agentsResult.success) {
+        setAgents(agentsResult.agents || []);
+      }
+
+      // Get groups
+      if (personResult.success && personResult.person?.assignedAgentId) {
+        const groupsResult = await crmService.getGroups(personResult.person.assignedAgentId);
+        if (groupsResult.success) {
+          setGroups(groupsResult.groups || []);
         }
       }
 
       // Get deal types
-      if (dealTypes.length === 0) {
-        const typesResult = await crmService.getDealTypes();
-        if (typesResult.success) {
-          setDealTypes(typesResult.types || []);
-        }
+      const typesResult = await crmService.getDealTypes();
+      if (typesResult.success) {
+        setDealTypes(typesResult.types || []);
       }
 
       // Get deals for this person
-      if (deals.length === 0 && id) {
-        const dealsResult = await crmService.getDealsForPerson(id);
+      if (activity.personId) {
+        const dealsResult = await crmService.getDealsForPerson(activity.personId);
         if (dealsResult.success) {
           setDeals(dealsResult.deals || []);
         }
@@ -277,20 +149,17 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [activity, showToast, agents.length, dealTypes.length, deals.length, groupId]);
+  }, [activity, showToast]);
 
   useEffect(() => {
     if (isOpen && activity) {
-      // Reset groups when modal opens to avoid stale data
-      setGroups([]);
-      setGroupId('');
       loadPersonData();
     }
   }, [isOpen, activity]);
 
   // Handle applying changes
   const handleApplyChanges = async () => {
-    if (!person || !personId) return;
+    if (!person) return;
 
     setSaving(true);
     try {
@@ -302,7 +171,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         channelPreference
       };
 
-      const updateResult = await crmService.updatePerson(personId, updates);
+      const updateResult = await crmService.updatePerson(activity.personId, updates);
       if (!updateResult.success) {
         showToast(updateResult.error || 'Failed to update person', 'error');
         setSaving(false);
@@ -313,7 +182,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
       // 2. Update LinkedIn lifecycle
       if (linkedinState) {
         const lifecycleResult = await crmService.updateLifecycleState(
-          personId,
+          activity.personId,
           'linkedin',
           linkedinState,
           linkedinReason || 'manual_update'
@@ -334,7 +203,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
       // 3. Update email channel if changed
       const currentEmail = person.channels?.find(c => c.type === 'email')?.identifiers?.email || '';
       if (emailAddress !== currentEmail) {
-        const emailResult = await crmService.updateEmailChannel(personId, emailAddress);
+        const emailResult = await crmService.updateEmailChannel(activity.personId, emailAddress);
         if (!emailResult.success) {
           showToast(emailResult.error || 'Failed to update email', 'error');
           setSaving(false);
@@ -349,7 +218,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
       const currentEmailState = emailThreadInfo?.lifecycle?.state || '';
       if (emailState && emailState !== currentEmailState) {
         const emailLifecycleResult = await crmService.updateEmailLifecycle(
-          personId,
+          activity.personId,
           emailState,
           emailReason || 'manual_update'
         );
@@ -383,15 +252,10 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
       return;
     }
 
-    if (!personId) {
-      showToast('No person selected', 'error');
-      return;
-    }
-
     setSaving(true);
     try {
       const result = await crmService.createDeal({
-        personId: personId,
+        personId: activity.personId,
         name: dealForm.name.trim(),
         description: dealForm.description,
         dealSize: parseFloat(dealForm.size) || 0,
@@ -660,7 +524,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">Group</label>
               <div className="flex gap-2">
                 <select
-                  value={groupId || ''}
+                  value={groupId}
                   onChange={(e) => {
                     const value = e.target.value;
                     if (value === '__new__') {
@@ -1220,8 +1084,8 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                 ))}
               </div>
             </div>
-            {personId ? (
-              <MessageList personId={personId} channel={messageChannel} />
+            {person?._id ? (
+              <MessageList personId={person._id} channel={messageChannel} />
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <p>Loading messages...</p>

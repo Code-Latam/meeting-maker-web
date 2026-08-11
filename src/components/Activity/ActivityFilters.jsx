@@ -30,7 +30,8 @@ export function ActivityFilters({
   onDirectionChange,
   onSearchChange,
   counts = null,
-  className = ''
+  className = '',
+  showDirection = true // ✅ NEW: Allow hiding direction filter
 }) {
   const [localSearch, setLocalSearch] = useState(searchQuery || '');
   const searchTimeout = useRef(null);
@@ -143,25 +144,27 @@ export function ActivityFilters({
           })}
         </div>
 
-        {/* Direction */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {DIRECTIONS.map((dir) => {
-            const isActive = direction === dir.value;
-            return (
-              <button
-                key={dir.value}
-                onClick={() => onDirectionChange(dir.value)}
-                className={`px-3 py-1 text-xs rounded-md transition-colors min-h-[32px] ${
-                  isActive
-                    ? 'bg-white text-gray-800 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {dir.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Direction - ✅ Conditionally shown */}
+        {showDirection && (
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            {DIRECTIONS.map((dir) => {
+              const isActive = direction === dir.value;
+              return (
+                <button
+                  key={dir.value}
+                  onClick={() => onDirectionChange(dir.value)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors min-h-[32px] ${
+                    isActive
+                      ? 'bg-white text-gray-800 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {dir.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -16,6 +16,7 @@ import { PersonsPage } from './pages/PersonsPage';
 import { AgentCampaignsPage } from './pages/AgentCampaignsPage';
 import { MarketingCampaignsPage } from './pages/MarketingCampaignsPage';
 import { ActivityTab } from './components/Activity/ActivityTab'; 
+import { ConversionsTab } from './components/Tabs/ConversionsTab';
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -38,6 +39,8 @@ function App() {
         <Route path="ranking" element={<RankingTab />} />
         <Route path="crm" element={<CRMTab />} />
         <Route path="about" element={<AboutTab />} />
+
+        <Route path="conversions" element={<ConversionsTab />} />
         
         {/* Agent Detail Pages */}
         <Route path="agents/:agentId/persons" element={<PersonsPage />} />
