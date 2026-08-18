@@ -713,7 +713,7 @@ const handleSearchSubmit = async (e) => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
               placeholder="e.g., Sales Director, Head of Growth"
             />
-            <p className="text-xs text-gray-500 mt-1">Separate titles with commas</p>
+            <p className="text-xs text-gray-500 mt-1">Only one title allowed</p>
           </div>
 
           {/* Locations */}
