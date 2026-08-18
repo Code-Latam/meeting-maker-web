@@ -126,146 +126,66 @@ export function AgentCampaignsPage() {
     });
   };
 
-const handleSearchSubmit = async (e) => {
-  e.preventDefault();
-  
-  // =====================================================
-  // STEP 1: Get raw input values
-  // =====================================================
-  
-  const keywordsRaw = searchFormData.keywords.trim();
-  const titlesRaw = searchFormData.titles.trim();
-  
-  // =====================================================
-  // STEP 2: Validate Keywords
-  // =====================================================
-  
-  // 2a: Check if keywords are empty
-  if (!keywordsRaw) {
-    showToast('Please enter at least one keyword', 'error');
-    return;
-  }
-  
-  // 2b: Check for space-separated keywords (multiple words, no commas)
-  if (keywordsRaw && !keywordsRaw.includes(',')) {
-    const words = keywordsRaw.split(/\s+/);
-    if (words.length > 1) {
-      const shouldContinue = window.confirm(
-        `⚠️ Keywords appear to be space-separated.\n\n` +
-        `You entered: "${keywordsRaw}"\n` +
-        `This will be treated as ONE keyword: "${keywordsRaw}"\n\n` +
-        `Suggested format: "${words.join(', ')}"\n\n` +
-        `"OK" to continue anyway\n"Cancel" to fix manually`
-      );
-      if (!shouldContinue) return;
+  // Handle search campaign submit
+  const handleSearchSubmit = async (e) => {
+    e.preventDefault();
+    
+    const keywords = searchFormData.keywords.split(',').map(k => k.trim()).filter(Boolean);
+    const titles = searchFormData.titles.split(',').map(t => t.trim()).filter(Boolean);
+
+    if (!searchFormData.name) {
+      showToast('Campaign name is required', 'error');
+      return;
     }
-  }
-  
-  // 2c: Parse keywords and check count
-  const keywords = keywordsRaw ? keywordsRaw.split(',').map(k => k.trim()).filter(Boolean) : [];
-  
-  if (keywords.length === 0) {
-    showToast('Please enter at least one keyword', 'error');
-    return;
-  }
-  
-  if (keywords.length > 5) {
-    showToast(`Maximum 5 keywords allowed. You entered ${keywords.length}.`, 'error');
-    return;
-  }
-  
-  // =====================================================
-  // STEP 3: Validate Titles (SINGLE title only!)
-  // =====================================================
-  
-  // 3a: Check if title is empty
-  if (!titlesRaw) {
-    showToast('Please enter a title', 'error');
-    return;
-  }
-  
-  // 3b: Check if user entered multiple titles (comma-separated) - BLOCK!
-  if (titlesRaw && titlesRaw.includes(',')) {
-    const titleCount = titlesRaw.split(',').filter(t => t.trim()).length;
-    showToast(`⚠️ Only ONE title is allowed. You entered ${titleCount} titles. Please enter a single title.`, 'error');
-    return;
-  }
-  
-  // 3c: 🆕 Check if title has spaces - WARNING (user might be trying to enter multiple titles)
-  if (titlesRaw && titlesRaw.includes(' ')) {
-    const wordCount = titlesRaw.split(/\s+/).length;
-    const shouldContinue = window.confirm(
-      `⚠️ "${titlesRaw}" contains ${wordCount} words with spaces.\n\n` +
-      `Only ONE title is allowed.\n` +
-      `If you meant to enter multiple titles, only one title is allowed\n\n` +
-      `"OK" to continue with "${titlesRaw}" as a single title\n` +
-      `"Cancel" to fix manually`
-    );
-    if (!shouldContinue) return;
-  }
-  
-  // 3d: Parse titles (single value)
-  const titles = titlesRaw ? [titlesRaw.trim()] : [];
-  
-  // =====================================================
-  // STEP 4: Campaign name validation
-  // =====================================================
-  
-  if (!searchFormData.name) {
-    showToast('Campaign name is required', 'error');
-    return;
-  }
 
-  // =====================================================
-  // STEP 5: Daily limit validation
-  // =====================================================
-  
-  const maxLimit = searchFormData.channel === 'email' ? 200 : 30;
-  if (searchFormData.dailyLimit > maxLimit) {
-    showToast(`Daily limit for ${searchFormData.channel} cannot exceed ${maxLimit}`, 'error');
-    return;
-  }
+    if (keywords.length > 5) {
+      showToast('Maximum 5 keywords allowed', 'error');
+      return;
+    }
 
-  // =====================================================
-  // STEP 6: Submit campaign
-  // =====================================================
-  
-  const data = {
-    name: searchFormData.name,
-    channel: searchFormData.channel,
-    dailyLimit: searchFormData.dailyLimit,
-    agentId,
-    schedule: {
-      activeHours: {
-        start: searchFormData.activeStart,
-        end: searchFormData.activeEnd
+    // Validate daily limit based on channel
+    const maxLimit = searchFormData.channel === 'email' ? 200 : 30;
+    if (searchFormData.dailyLimit > maxLimit) {
+      showToast(`Daily limit for ${searchFormData.channel} cannot exceed ${maxLimit}`, 'error');
+      return;
+    }
+
+    const data = {
+      name: searchFormData.name,
+      channel: searchFormData.channel,
+      dailyLimit: searchFormData.dailyLimit,
+      agentId,
+      schedule: {
+        activeHours: {
+          start: searchFormData.activeStart,
+          end: searchFormData.activeEnd
+        }
+      },
+      searchCriteria: {
+        keywords,
+        titles,
+        locations: searchFormData.locations,
+        industries: searchFormData.industries,
+        connectionDegree: parseInt(searchFormData.connectionDegree),
+        openToWork: searchFormData.openToWork,
+        hiring: searchFormData.hiring,
+        openToWorkOptions: searchFormData.openToWorkOptions
+      },
+      icpCriteria: {
+        minConfidence: searchFormData.minConfidence
       }
-    },
-    searchCriteria: {
-      keywords,
-      titles,
-      locations: searchFormData.locations,
-      industries: searchFormData.industries,
-      connectionDegree: parseInt(searchFormData.connectionDegree),
-      openToWork: searchFormData.openToWork,
-      hiring: searchFormData.hiring,
-      openToWorkOptions: searchFormData.openToWorkOptions
-    },
-    icpCriteria: {
-      minConfidence: searchFormData.minConfidence
+    };
+
+    const result = await campaignsService.createSearchCampaign(data);
+    if (result.success) {
+      showToast('Campaign created successfully', 'success');
+      setIsModalOpen(false);
+      resetSearchForm();
+      await loadSearchCampaigns();
+    } else {
+      showToast(result.error || 'Failed to create campaign', 'error');
     }
   };
-
-  const result = await campaignsService.createSearchCampaign(data);
-  if (result.success) {
-    showToast('Campaign created successfully', 'success');
-    setIsModalOpen(false);
-    resetSearchForm();
-    await loadSearchCampaigns();
-  } else {
-    showToast(result.error || 'Failed to create campaign', 'error');
-  }
-};
 
   // Handle post campaign submit
   const handlePostSubmit = async (e) => {

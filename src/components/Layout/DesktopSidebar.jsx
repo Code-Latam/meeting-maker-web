@@ -14,6 +14,11 @@ const navItems = [
   { id: 'about', icon: 'ℹ️', label: 'About', path: '/about' },
 ];
 
+// ✅ Agency-only nav items
+const agencyNavItems = [
+  { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' },
+];
+
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -96,6 +101,15 @@ export function DesktopSidebar() {
 
   const statusDisplay = getLinkedInStatusDisplay();
 
+  // ✅ Check if user is an agency
+  const isAgency = client?.isAgency || false;
+
+  // Combine nav items - add agency items if user is an agency
+  const allNavItems = [...navItems];
+  if (isAgency) {
+    allNavItems.push(...agencyNavItems);
+  }
+
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
       {/* Client Name Only */}
@@ -103,6 +117,14 @@ export function DesktopSidebar() {
         <p className="text-lg font-semibold text-gray-800 truncate" title={displayName}>
           {displayName}
         </p>
+        {/* ✅ Show agency badge */}
+        {isAgency && (
+          <div className="mt-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700">
+              🏢 Agency
+            </span>
+          </div>
+        )}
       </div>
       
       {/* LinkedIn Status */}
@@ -119,7 +141,7 @@ export function DesktopSidebar() {
       </div>
       
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
+        {allNavItems.map((item) => {
           const active = isActive(item);
           return (
             <button

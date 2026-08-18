@@ -3,7 +3,8 @@ import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from './components/Layout/AppLayout';
 import { Login } from './pages/Login';
 import { HelpPage } from './pages/HelpPage';
-import { InvoicePage } from './pages/InvoicePage'; // ✅ ADD THIS
+import { InvoicePage } from './pages/InvoicePage';
+import { Agency } from './pages/Agency'; // ✅ NEW IMPORT
 import { useAuthStore } from './store';
 import { AgentsTab } from './components/Tabs/AgentsTab';
 import { DashboardTab } from './pages/DashboardTab';
@@ -41,6 +42,9 @@ function App() {
         <Route path="about" element={<AboutTab />} />
 
         <Route path="conversions" element={<ConversionsTab />} />
+        
+        {/* ✅ Agency Route */}
+        <Route path="agency" element={<Agency />} />
         
         {/* Agent Detail Pages */}
         <Route path="agents/:agentId/persons" element={<PersonsPage />} />

@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService } from '../services/auth';
+import { api } from '../services/api';
 
+// ============================================================
+// AUTH STORE
+// ============================================================
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -23,11 +27,27 @@ export const useAuthStore = create(
           console.log('  client:', result.client);
           console.log('  client.name:', result.client?.name);
           
-          // Try to get client from multiple sources
           let clientData = result.client;
           if (!clientData && result.user?.client) {
             clientData = result.user.client;
             console.log('📦 Client found in user.client:', clientData);
+          }
+          
+          // Fetch full client data from /me to get agency fields
+          try {
+            console.log('📦 Fetching full client data from /me...');
+            const meResponse = await api.get('/auth/me');
+            if (meResponse.data?.client) {
+              clientData = {
+                ...clientData,
+                ...meResponse.data.client,
+              };
+              console.log('✅ Full client data fetched:', clientData);
+              console.log('✅ isAgency:', clientData.isAgency);
+              console.log('✅ childClientIds:', clientData.childClientIds);
+            }
+          } catch (meError) {
+            console.error('❌ Failed to fetch /me:', meError);
           }
           
           set({
@@ -38,12 +58,13 @@ export const useAuthStore = create(
             isLoading: false,
           });
           
-          // Verify what was set
           const state = get();
           console.log('📦 Auth state after login:', {
             user: state.user,
             client: state.client,
             clientName: state.client?.name,
+            isAgency: state.client?.isAgency,
+            childCount: state.client?.childClientIds?.length || 0,
           });
         } else {
           console.log('❌ Login failed:', result.error);
@@ -55,6 +76,10 @@ export const useAuthStore = create(
       logout: () => {
         console.log('🚪 Logging out...');
         authService.logout();
+        // ✅ Clear active client on logout
+        if (typeof useAppStore !== 'undefined') {
+          useAppStore.getState().clearActiveClient();
+        }
         set({ 
           user: null, 
           client: null,
@@ -63,60 +88,92 @@ export const useAuthStore = create(
         });
       },
       
-      checkAuth: () => {
-        console.log('🔍 Checking auth...');
-        const token = localStorage.getItem('jwt');
-        const user = authService.getCurrentUser();
-        
-        // Get client from localStorage directly
-        let client = null;
+     checkAuth: async () => {
+  console.log('🔍 Checking auth...');
+  const token = localStorage.getItem('jwt');
+  
+  if (!token) {
+    set({ 
+      user: null, 
+      client: null,
+      token: null, 
+      isAuthenticated: false 
+    });
+    return;
+  }
+
+  try {
+    // ✅ Fetch fresh user and client data from /me
+    const response = await api.get('/auth/me');
+    const userData = response.data.user;
+    const clientData = response.data.client;
+    
+    console.log('✅ Fresh client data from /me:', clientData);
+    console.log('✅ isAgency:', clientData?.isAgency);
+    console.log('✅ childClientIds:', clientData?.childClientIds);
+    
+    // ✅ Store in localStorage
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('client', JSON.stringify(clientData));
+    
+    set({
+      user: userData,
+      client: clientData,
+      token: token,
+      isAuthenticated: true,
+      isLoading: false,
+    });
+    
+    console.log('✅ Auth set with fresh data');
+  } catch (error) {
+    console.error('❌ Failed to fetch /me:', error);
+    // Fallback: try to load from localStorage
+    const user = authService.getCurrentUser();
+    let client = null;
+    try {
+      const clientData = localStorage.getItem('client');
+      if (clientData) {
+        client = JSON.parse(clientData);
+      }
+    } catch (e) {
+      client = null;
+    }
+    
+    if (user) {
+      set({ 
+        user, 
+        client,
+        token, 
+        isAuthenticated: true 
+      });
+    } else {
+      set({ 
+        user: null, 
+        client: null,
+        token: null, 
+        isAuthenticated: false 
+      });
+    }
+  }
+},
+
+      refreshClient: async () => {
         try {
-          const clientData = localStorage.getItem('client');
-          console.log('📦 Client data from localStorage:', clientData);
-          if (clientData) {
-            client = JSON.parse(clientData);
-            console.log('✅ Parsed client:', client);
-            console.log('✅ Client name:', client?.name);
-          } else {
-            console.log('⚠️ No client data in localStorage');
-            // Try to get client from user object
-            if (user?.client) {
-              console.log('📦 Found client in user object:', user.client);
-              client = user.client;
-              // Store it for future use
-              localStorage.setItem('client', JSON.stringify(client));
-              console.log('✅ Client stored in localStorage from user object');
-            }
+          console.log('🔄 Refreshing client data from /me...');
+          const response = await api.get('/auth/me');
+          if (response.data?.client) {
+            const clientData = response.data.client;
+            localStorage.setItem('client', JSON.stringify(clientData));
+            set({ client: clientData });
+            console.log('✅ Client data refreshed:', clientData);
+            console.log('✅ isAgency:', clientData.isAgency);
+            console.log('✅ childClientIds:', clientData.childClientIds);
+            return clientData;
           }
         } catch (error) {
-          console.error('❌ Error parsing client data:', error);
-          client = null;
+          console.error('❌ Failed to refresh client:', error);
         }
-        
-        console.log('📊 Auth check results:', {
-          hasToken: !!token,
-          hasUser: !!user,
-          hasClient: !!client,
-          clientName: client?.name,
-        });
-        
-        if (token && user) {
-          set({ 
-            user, 
-            client,
-            token, 
-            isAuthenticated: true 
-          });
-          console.log('✅ Auth set: user and client stored');
-        } else {
-          set({ 
-            user: null, 
-            client: null,
-            token: null, 
-            isAuthenticated: false 
-          });
-          console.log('❌ Auth cleared');
-        }
+        return null;
       },
     }),
     {
@@ -125,7 +182,25 @@ export const useAuthStore = create(
   )
 );
 
-// UI Store
+// ============================================================
+// ✅ APP STORE - For agency client switching
+// ============================================================
+export const useAppStore = create(
+  persist(
+    (set) => ({
+      activeClientId: null,
+      setActiveClientId: (clientId) => set({ activeClientId: clientId }),
+      clearActiveClient: () => set({ activeClientId: null }),
+    }),
+    {
+      name: 'app-storage',
+    }
+  )
+);
+
+// ============================================================
+// UI STORE
+// ============================================================
 export const useUIStore = create((set) => ({
   isMobile: window.innerWidth < 1024,
   isSidebarOpen: window.innerWidth >= 1024,

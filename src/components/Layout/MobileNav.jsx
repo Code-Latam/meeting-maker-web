@@ -14,6 +14,9 @@ const tabs = [
   { id: 'about', icon: 'ℹ️', label: 'About', path: '/about' },
 ];
 
+// ✅ Agency-only tab
+const agencyTab = { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' };
+
 export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,6 +67,15 @@ export function MobileNav() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // ✅ Check if user is an agency
+  const isAgency = client?.isAgency || false;
+
+  // Combine tabs - add agency tab if user is an agency
+  const allTabs = [...tabs];
+  if (isAgency) {
+    allTabs.push(agencyTab);
+  }
+
   const handleTabClick = (tab) => {
     setActiveTab(tab.id);
     navigate(tab.path);
@@ -80,7 +92,7 @@ export function MobileNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom max-w-md mx-auto z-10">
       <div className="flex justify-around py-1">
-        {tabs.map((tab) => {
+        {allTabs.map((tab) => {
           const active = isActive(tab);
           return (
             <button
