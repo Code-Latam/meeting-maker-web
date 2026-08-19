@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore, useUIStore } from '../../store';
+import { ClientSwitcher } from './ClientSwitcher';
+import { useAppStore } from '../../store';
 
 export function Header() {
-  const { user, client, logout } = useAuthStore();
+  const { user, client, agencyClient, logout } = useAuthStore();
+  const { activeClientId } = useAppStore();
   const { isMobile, toggleSidebar } = useUIStore();
   const [displayName, setDisplayName] = useState('User');
+  const [isAgency, setIsAgency] = useState(false);
+  const [isViewingChild, setIsViewingChild] = useState(false);
+  const [childName, setChildName] = useState('');
 
-  // Update display name when client or user changes
   useEffect(() => {
-    console.log('🔄 Header useEffect - client changed:', client);
-    console.log('🔄 Header useEffect - client?.name:', client?.name);
-    
-    // Get client name from multiple possible locations
+    // ✅ Get display name from active client
     const getClientName = () => {
       if (client?.name) return client.name;
       if (client?.client?.name) return client.client.name;
@@ -20,23 +22,44 @@ export function Header() {
     };
 
     const clientName = getClientName();
-    const newDisplayName = clientName || user?.email || 'User';
-    console.log('📝 Setting display name to:', newDisplayName);
-    setDisplayName(newDisplayName);
-  }, [client, user]);
+    setDisplayName(clientName || user?.email || 'User');
+    
+    // ✅ Check if user is an agency
+    const isAgencyUser = agencyClient?.isAgency || false;
+    setIsAgency(isAgencyUser);
+    
+    // ✅ Check if we're viewing a child client
+    const isChild = isAgencyUser && 
+                    activeClientId && 
+                    agencyClient?._id && 
+                    activeClientId !== agencyClient._id;
+    setIsViewingChild(isChild);
+    
+    // ✅ Try to find the child name from accessible clients
+    if (isChild && client?.name && client._id === activeClientId) {
+      setChildName(client.name);
+    } else if (isChild) {
+      // If client doesn't match, try to find it from accessibleClients
+      // We need to fetch or use the stored name
+      setChildName('Child Client');
+    } else {
+      setChildName('');
+    }
+    
+    console.log('📝 Header - displayName:', displayName);
+    console.log('📝 Header - isViewingChild:', isChild);
+    console.log('📝 Header - childName:', childName);
+  }, [client, user, agencyClient, activeClientId]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 Header Debug:');
-    console.log('  user:', user);
-    console.log('  client:', client);
-    console.log('  client?.name:', client?.name);
-    console.log('  client?.isAgency:', client?.isAgency);
-    console.log('  displayName state:', displayName);
-  }, [user, client, displayName]);
+  // ✅ Build display label - use child name if viewing child
+  const getDisplayLabel = () => {
+    if (isViewingChild && childName) {
+      return childName;
+    }
+    return displayName;
+  };
 
-  // ✅ Check if user is an agency
-  const isAgency = client?.isAgency || false;
+  const displayLabel = getDisplayLabel();
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200 safe-top">
@@ -57,20 +80,33 @@ export function Header() {
             </h1>
             <span className="text-sm text-gray-400 font-medium flex-shrink-0">|</span>
             <span className="text-sm text-gray-600 font-medium truncate">
-              {displayName}
+              {displayLabel}
             </span>
-            {/* ✅ Show agency badge if user is an agency */}
-            {isAgency && (
+            {/* ✅ Show agency badge when NOT viewing a child */}
+            {isAgency && !isViewingChild && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700 flex-shrink-0">
                 🏢 Agency
+              </span>
+            )}
+            {/* ✅ Show child badge when viewing a child */}
+            {isViewingChild && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 flex-shrink-0">
+                📁 Child
+              </span>
+            )}
+            {/* ✅ Show agency name when viewing child */}
+            {isAgency && isViewingChild && agencyClient?.name && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 flex-shrink-0 text-[10px]">
+                via {agencyClient.name}
               </span>
             )}
           </div>
         </div>
         
         <div className="flex items-center gap-2 flex-shrink-0">
+          {isAgency && <ClientSwitcher />}
           <span className="sm:hidden text-xs text-gray-500 truncate max-w-[80px]">
-            {displayName}
+            {displayLabel}
           </span>
           <button
             onClick={logout}

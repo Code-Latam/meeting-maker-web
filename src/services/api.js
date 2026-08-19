@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { useAppStore } from '../store';
+import { useAuthStore } from '../store';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.meetingmaker.tech';
 
-// Create axios instance
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -12,7 +12,6 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor to add token and client ID
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('jwt');
@@ -20,9 +19,15 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Add active client ID to headers for agency mode
+    // NEVER send X-Client-Id for /me endpoint
+    if (config.url?.includes('/auth/me')) {
+      return config;
+    }
+
     const activeClientId = useAppStore.getState().activeClientId;
-    if (activeClientId) {
+    const agencyClient = useAuthStore.getState().agencyClient;
+    
+    if (activeClientId && agencyClient && activeClientId !== agencyClient._id?.toString()) {
       config.headers['X-Client-Id'] = activeClientId;
     }
 
@@ -31,32 +36,33 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor with special handling for verify-child
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // ✅ Check if this is a verify-child request
-    const isVerifyChildRequest = error.config?.url?.includes('/auth/agency/verify-child');
+    const url = error.config?.url || '';
+    const isVerifyChildRequest = url.includes('/auth/agency/verify-child');
+    const isMeRequest = url.includes('/auth/me');
+    const isLoginRequest = url.includes('/auth/login');
     
-    // Only handle 401 for non-verify-child requests
-    if (error.response?.status === 401 && !isVerifyChildRequest) {
+    // ✅ NEVER redirect on 401 for auth-related calls
+    if (error.response?.status === 401 && !isVerifyChildRequest && !isMeRequest && !isLoginRequest) {
+      console.log('🔒 401 Unauthorized - Redirecting to login');
       localStorage.removeItem('jwt');
       localStorage.removeItem('user');
       localStorage.removeItem('client');
+      localStorage.removeItem('agencyClient');
+      localStorage.removeItem('activeClientId');
       window.location.href = '/login';
     }
     
-    // ✅ For verify-child, just pass the error through
     return Promise.reject(error);
   }
 );
 
-// Helper to set the active client (for agency switching)
 export const setActiveClient = (clientId) => {
   useAppStore.getState().setActiveClientId(clientId);
 };
 
-// Helper to clear the active client
 export const clearActiveClient = () => {
   useAppStore.getState().clearActiveClient();
 };
