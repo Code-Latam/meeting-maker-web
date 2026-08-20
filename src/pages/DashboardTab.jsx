@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../store';
+import { api } from '../services/api'; // ✅ Import api
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
 
 export function DashboardTab() {
@@ -78,18 +79,12 @@ export function DashboardTab() {
     });
   };
 
+  // ✅ FIXED: Use api service instead of direct fetch
   const fetchAgents = async () => {
     try {
-      const token = localStorage.getItem('jwt');
-      const response = await fetch('https://api.meetingmaker.tech/agents', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+      const response = await api.get('/agents');
+      if (response.data) {
+        const data = response.data;
         setAgents(data.agents || []);
         if (data.agents && data.agents.length > 0) {
           setSelectedAgentId(data.agents[0]._id);
@@ -101,9 +96,9 @@ export function DashboardTab() {
     }
   };
 
+  // ✅ FIXED: Use api service instead of direct fetch
   const fetchMetric = async (metric, agentId, timeframeValue) => {
     try {
-      const token = localStorage.getItem('jwt');
       const body = {
         metric,
         agentId,
@@ -113,29 +108,17 @@ export function DashboardTab() {
         }
       };
       
-      const response = await fetch('https://api.meetingmaker.tech/analytics/query', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.data?.value ?? 0;
-      }
-      return 0;
+      const response = await api.post('/analytics/query', body);
+      return response.data?.data?.value ?? 0;
     } catch (error) {
       console.error(`Error fetching ${metric}:`, error);
       return 0;
     }
   };
 
+  // ✅ FIXED: Use api service instead of direct fetch
   const fetchTimeseries = async (metric, agentId, timeframeValue) => {
     try {
-      const token = localStorage.getItem('jwt');
       const body = {
         metric,
         agentId,
@@ -146,65 +129,34 @@ export function DashboardTab() {
         format: 'timeseries'
       };
       
-      const response = await fetch('https://api.meetingmaker.tech/analytics/query', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.data?.series || [];
-      }
-      return [];
+      const response = await api.post('/analytics/query', body);
+      return response.data?.data?.series || [];
     } catch (error) {
       console.error(`Error fetching timeseries for ${metric}:`, error);
       return [];
     }
   };
 
-  // ✅ FIXED: fetchDailyConnections with better debugging
+  // ✅ FIXED: Use api service instead of direct fetch
   const fetchDailyConnections = async (timeframeValue) => {
     try {
-      const token = localStorage.getItem('jwt');
-      const url = new URL('https://api.meetingmaker.tech/analytics/daily-connections');
-      if (timeframeValue) url.searchParams.append('timeframe', timeframeValue);
+      const params = timeframeValue ? { timeframe: timeframeValue } : {};
+      const response = await api.get('/analytics/daily-connections', { params });
       
-      console.log('🔍 Fetching daily connections from:', url.toString());
+      console.log('📥 Daily connections response:', response.data);
       
-      const response = await fetch(url.toString(), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('📥 Daily connections response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📊 Daily connections data:', data);
-        console.log('📊 Data type:', typeof data);
-        console.log('📊 Is array?', Array.isArray(data));
-        console.log('📊 Length:', data?.length);
-        
-        // Handle different response formats
-        if (Array.isArray(data)) {
-          return data;
-        } else if (data && data.data && Array.isArray(data.data)) {
-          return data.data;
-        } else if (data && data.connections && Array.isArray(data.connections)) {
-          return data.connections;
-        } else {
-          console.warn('⚠️ Unexpected data format:', data);
-          return [];
-        }
+      // Handle different response formats
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        return data.data;
+      } else if (data && data.connections && Array.isArray(data.connections)) {
+        return data.connections;
+      } else {
+        console.warn('⚠️ Unexpected data format:', data);
+        return [];
       }
-      console.warn('⚠️ Daily connections API returned non-OK status:', response.status);
-      return [];
     } catch (error) {
       console.error('❌ Error fetching daily connections:', error);
       return [];
@@ -311,7 +263,7 @@ export function DashboardTab() {
   };
 
   // ============================================================
-  // CHART RENDER FUNCTIONS
+  // CHART RENDER FUNCTIONS (unchanged)
   // ============================================================
 
   const renderLinkedInCharts = (leadsSeries, leads, invitations, connections, inConversation, dailyConnectionsData) => {
@@ -334,18 +286,13 @@ export function DashboardTab() {
       funnelChartRef.current = createFunnelChart(funnelCanvas, leads, invitations, connections, inConversation);
     }
 
-    // 3. Daily Connections Chart - ✅ FIXED with better logging
-    console.log('📊 Rendering daily connections chart with data:', dailyConnectionsData);
-    
+    // 3. Daily Connections Chart
     if (dailyConnectionsData && Array.isArray(dailyConnectionsData) && dailyConnectionsData.length > 0) {
       const dailyCanvas = document.getElementById('dailyConnectionsChart');
       if (dailyCanvas) {
-        console.log('✅ Rendering daily connections chart with', dailyConnectionsData.length, 'data points');
         dailyConnectionsChartRef.current = createBarChart(dailyCanvas, dailyConnectionsData, 'Connections Added', '#2563eb');
       }
     } else {
-      console.warn('⚠️ No daily connections data available');
-      // Show a message in the chart container
       const container = document.getElementById('dailyConnectionsContainer');
       if (container) {
         container.innerHTML = `
@@ -388,7 +335,7 @@ export function DashboardTab() {
   };
 
   // ============================================================
-  // CHART CREATION HELPERS
+  // CHART CREATION HELPERS (unchanged)
   // ============================================================
 
   const createBarChart = (canvas, data, label, color) => {
@@ -689,7 +636,7 @@ export function DashboardTab() {
               <option value="last_7_days">Last 7 days</option>
               <option value="last_30_days">Last 30 days</option>
               <option value="last_90_days">Last 90 days</option>
-              <option value="last_12_months" selected>Last 12 months</option>
+              <option value="last_12_months">Last 12 months</option>
             </select>
           </div>
         </div>

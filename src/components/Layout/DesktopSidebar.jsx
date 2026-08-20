@@ -22,7 +22,7 @@ const agencyNavItems = [
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, user, client } = useAuthStore();
+  const { logout, user, client, agencyClient } = useAuthStore();
   const { isSidebarOpen } = useUIStore();
   const [displayName, setDisplayName] = useState('Loading...');
   const [linkedinStatus, setLinkedinStatus] = useState({
@@ -102,8 +102,7 @@ export function DesktopSidebar() {
   const statusDisplay = getLinkedInStatusDisplay();
 
   // ✅ Check if user is an agency
-  const isAgency = client?.isAgency || false;
-
+  const isAgency = agencyClient?.isAgency || false;
   // Combine nav items - add agency items if user is an agency
   const allNavItems = [...navItems];
   if (isAgency) {

@@ -21,7 +21,7 @@ export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setActiveTab } = useUIStore();
-  const { user, client } = useAuthStore();
+ const { user, client, agencyClient } = useAuthStore();
   const [displayName, setDisplayName] = useState('User');
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
@@ -68,7 +68,7 @@ export function MobileNav() {
   }, []);
 
   // ✅ Check if user is an agency
-  const isAgency = client?.isAgency || false;
+  const isAgency = agencyClient?.isAgency || false;
 
   // Combine tabs - add agency tab if user is an agency
   const allTabs = [...tabs];
