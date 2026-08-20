@@ -91,37 +91,33 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-10">
-      <div className="flex justify-around py-1 px-2 max-w-md mx-auto relative">
+      <div className="flex justify-around items-center py-1.5 max-w-md mx-auto">
         {allTabs.map((tab) => {
           const active = isActive(tab);
           return (
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab)}
-              className={`flex flex-col items-center p-1 min-w-[36px] transition-colors ${
+              className={`flex items-center justify-center p-2 min-w-[36px] transition-colors ${
                 active ? 'text-primary-600' : 'text-gray-500'
               }`}
+              title={tab.label}
             >
               <span className="text-xl leading-none">{tab.icon}</span>
-              {active && (
-                <span className="text-[8px] mt-0.5 font-medium">
-                  {tab.label}
-                </span>
-              )}
             </button>
           );
         })}
-        
-        {/* ✅ Client name and LinkedIn Status - positioned at the far right */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
-          <span className="text-[9px] text-gray-400 truncate max-w-[50px]" title={displayName}>
-            {displayName}
-          </span>
-          <span className="text-[9px] text-gray-400">🔗</span>
-          <span 
-            className={`w-2 h-2 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}
-          />
-        </div>
+      </div>
+      
+      {/* ✅ Client name and LinkedIn Status - fixed at bottom-right corner */}
+      <div className="absolute right-2 bottom-1.5 flex items-center gap-1.5 bg-white/90 px-1.5 py-0.5 rounded">
+        <span className="text-[8px] text-gray-400 truncate max-w-[40px]" title={displayName}>
+          {displayName}
+        </span>
+        <span className="text-[8px] text-gray-400">🔗</span>
+        <span 
+          className={`w-1.5 h-1.5 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}
+        />
       </div>
     </nav>
   );
