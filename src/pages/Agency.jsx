@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { AddChildModal } from '../components/Agency/AddChildModal';
 
 export function Agency() {
-  const { client } = useAuthStore();
+  const { client, agencyClient } = useAuthStore();
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -12,7 +12,7 @@ export function Agency() {
   const [removingId, setRemovingId] = useState(null);
 
   // Check if user is an agency
-  const isAgency = client?.isAgency || false;
+ const isAgency = agencyClient?.isAgency || false;
 
   // Fetch children
   const fetchChildren = async () => {
