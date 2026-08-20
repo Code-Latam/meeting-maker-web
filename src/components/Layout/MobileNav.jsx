@@ -21,7 +21,7 @@ export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setActiveTab } = useUIStore();
- const { user, client, agencyClient } = useAuthStore();
+  const { user, client, agencyClient } = useAuthStore();
   const [displayName, setDisplayName] = useState('User');
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
@@ -98,12 +98,13 @@ export function MobileNav() {
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab)}
-              className={`flex flex-col items-center p-2 min-w-[44px] transition-colors ${
+              className={`flex flex-col items-center p-1 min-w-[36px] transition-colors ${
                 active ? 'text-primary-600' : 'text-gray-500'
               }`}
             >
-              <span className="text-xl">{tab.icon}</span>
-              <span className={`text-xs mt-0.5 ${active ? 'font-medium' : ''}`}>
+              <span className="text-xl leading-none">{tab.icon}</span>
+              {/* ✅ Label only visible for active tab */}
+              <span className={`text-[8px] mt-0.5 ${active ? 'font-medium' : 'opacity-0'}`}>
                 {tab.label}
               </span>
             </button>
