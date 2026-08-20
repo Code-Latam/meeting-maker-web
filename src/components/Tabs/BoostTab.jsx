@@ -25,7 +25,7 @@ export function BoostTab() {
       <div className="text-center">
         <h2 className="text-xl font-semibold text-gray-800">🚀 Boost a LinkedIn Post</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Submit one LinkedIn post per day to be boosted by the Meeting Maker network.
+          Submit one LinkedIn post per day to be boosted by our network.
           <br className="hidden sm:inline" />
           Status will be updated by our backend process.
         </p>

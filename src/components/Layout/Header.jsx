@@ -11,6 +11,7 @@ export function Header() {
   const [isAgency, setIsAgency] = useState(false);
   const [isViewingChild, setIsViewingChild] = useState(false);
   const [childName, setChildName] = useState('');
+  const [isAgencyRelated, setIsAgencyRelated] = useState(false);
 
   useEffect(() => {
     // ✅ Get display name from active client
@@ -35,18 +36,21 @@ export function Header() {
                     activeClientId !== agencyClient._id;
     setIsViewingChild(isChild);
     
+    // ✅ Check if user is agency-related (agency admin OR child client)
+    const isAgencyRelated = isAgencyUser || (client?.parentClientId !== null && client?.parentClientId !== undefined);
+    setIsAgencyRelated(isAgencyRelated);
+    
     // ✅ Try to find the child name from accessible clients
     if (isChild && client?.name && client._id === activeClientId) {
       setChildName(client.name);
     } else if (isChild) {
-      // If client doesn't match, try to find it from accessibleClients
-      // We need to fetch or use the stored name
       setChildName('Child Client');
     } else {
       setChildName('');
     }
     
     console.log('📝 Header - displayName:', displayName);
+    console.log('📝 Header - isAgencyRelated:', isAgencyRelated);
     console.log('📝 Header - isViewingChild:', isChild);
     console.log('📝 Header - childName:', childName);
   }, [client, user, agencyClient, activeClientId]);
@@ -75,11 +79,16 @@ export function Header() {
             </button>
           )}
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <h1 className="text-base sm:text-lg lg:text-xl font-bold text-primary-600 whitespace-nowrap flex-shrink-0">
-              Meeting Maker
-            </h1>
-            <span className="text-sm text-gray-400 font-medium flex-shrink-0">|</span>
-            <span className="text-sm text-gray-600 font-medium truncate">
+            {/* ✅ Hide "Meeting Maker" for agency-related users */}
+            {!isAgencyRelated && (
+              <>
+                <h1 className="text-base sm:text-lg lg:text-xl font-bold text-primary-600 whitespace-nowrap flex-shrink-0">
+                  Meeting Maker
+                </h1>
+                <span className="text-sm text-gray-400 font-medium flex-shrink-0">|</span>
+              </>
+            )}
+            <span className={`text-sm font-medium truncate ${isAgencyRelated ? 'text-gray-800' : 'text-gray-600'}`}>
               {displayLabel}
             </span>
             {/* ✅ Show agency badge when NOT viewing a child */}

@@ -6,10 +6,14 @@ import { RankingSuccess } from '../Ranking/RankingSuccess';
 import { RankingRateLimit } from '../Ranking/RankingRateLimit';
 
 export function RankingTab() {
-  const { user } = useAuthStore();
+  const { user, client, agencyClient } = useAuthStore();
   const [status, setStatus] = useState('form'); // 'form' | 'success' | 'rateLimit'
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [rateLimitData, setRateLimitData] = useState(null);
+
+  // ✅ Check if user is agency-related (agency admin OR child client)
+  const isAgencyRelated = agencyClient?.isAgency || false || 
+                          (client?.parentClientId !== null && client?.parentClientId !== undefined);
 
   // Check rate limit on mount if user is logged in and has email
   useEffect(() => {
@@ -88,24 +92,26 @@ export function RankingTab() {
         </div>
       )}
 
-      {/* Upgrade CTA */}
-      <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl border border-primary-200 p-6 text-center">
-        <p className="text-sm font-semibold text-gray-700">
-          🚀 Want to increase your score and be in the top 5%?
-        </p>
-        <p className="text-sm font-semibold text-gray-700 mt-1">
-          🚀 Increase your inbound 5X while reaching out to vetted ICP?
-        </p>
-        <p className="text-xs text-gray-500 mt-2">
-          Meeting Maker can track your progress daily and automate your LinkedIn marketing, outreach and inbound handling.
-        </p>
-        <button
-          onClick={handleUpgrade}
-          className="mt-3 btn-primary text-sm px-6 py-2"
-        >
-          Try the Meeting Maker!
-        </button>
-      </div>
+      {/* ✅ Upgrade CTA - Hidden for agency-related users */}
+      {!isAgencyRelated && (
+        <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl border border-primary-200 p-6 text-center">
+          <p className="text-sm font-semibold text-gray-700">
+            🚀 Want to increase your score and be in the top 5%?
+          </p>
+          <p className="text-sm font-semibold text-gray-700 mt-1">
+            🚀 Increase your inbound 5X while reaching out to vetted ICP?
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Track your progress daily and automate your LinkedIn marketing, outreach and inbound handling.
+          </p>
+          <button
+            onClick={handleUpgrade}
+            className="mt-3 btn-primary text-sm px-6 py-2"
+          >
+            Try the Meeting Maker!
+          </button>
+        </div>
+      )}
     </div>
   );
 }
