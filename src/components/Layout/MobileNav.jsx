@@ -90,8 +90,8 @@ export function MobileNav() {
                       linkedinStatus.connected ? 'bg-green-500' : 'bg-red-500';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom max-w-md mx-auto z-10">
-      <div className="flex justify-around py-1">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-10">
+      <div className="flex justify-around py-1 px-2 max-w-md mx-auto relative">
         {allTabs.map((tab) => {
           const active = isActive(tab);
           return (
@@ -103,7 +103,6 @@ export function MobileNav() {
               }`}
             >
               <span className="text-xl leading-none">{tab.icon}</span>
-              {/* ✅ Label completely hidden for inactive tabs */}
               {active && (
                 <span className="text-[8px] mt-0.5 font-medium">
                   {tab.label}
@@ -112,16 +111,17 @@ export function MobileNav() {
             </button>
           );
         })}
-      </div>
-      {/* Client name and LinkedIn Status on Mobile */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-        <span className="text-[10px] text-gray-400 truncate max-w-[60px]" title={displayName}>
-          👤{displayName}
-        </span>
-        <span className="text-[10px] text-gray-400">🔗</span>
-        <span 
-          className={`w-2 h-2 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}
-        />
+        
+        {/* ✅ Client name and LinkedIn Status - positioned at the far right */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+          <span className="text-[9px] text-gray-400 truncate max-w-[50px]" title={displayName}>
+            {displayName}
+          </span>
+          <span className="text-[9px] text-gray-400">🔗</span>
+          <span 
+            className={`w-2 h-2 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}
+          />
+        </div>
       </div>
     </nav>
   );
