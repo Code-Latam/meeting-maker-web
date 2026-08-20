@@ -103,10 +103,12 @@ export function MobileNav() {
               }`}
             >
               <span className="text-xl leading-none">{tab.icon}</span>
-              {/* ✅ Label only visible for active tab */}
-              <span className={`text-[8px] mt-0.5 ${active ? 'font-medium' : 'opacity-0'}`}>
-                {tab.label}
-              </span>
+              {/* ✅ Label completely hidden for inactive tabs */}
+              {active && (
+                <span className="text-[8px] mt-0.5 font-medium">
+                  {tab.label}
+                </span>
+              )}
             </button>
           );
         })}
