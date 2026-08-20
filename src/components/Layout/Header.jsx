@@ -114,9 +114,7 @@ export function Header() {
         
         <div className="flex items-center gap-2 flex-shrink-0">
           {isAgency && <ClientSwitcher />}
-          <span className="sm:hidden text-xs text-gray-500 truncate max-w-[80px]">
-            {displayLabel}
-          </span>
+          {/* ✅ REMOVED duplicate client name on mobile - it's already shown in the main area */}
           <button
             onClick={logout}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
