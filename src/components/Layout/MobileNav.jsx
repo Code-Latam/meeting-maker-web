@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore, useAuthStore } from '../../store';
 import { api } from '../../services/api';
 
-// ✅ Regular tabs (visible to everyone except child clients)
 const tabs = [
   { id: 'agents', icon: '🤖', label: 'Agents', path: '/' },
   { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
@@ -14,16 +13,14 @@ const tabs = [
   { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
 ];
 
-// ✅ Items hidden for child clients (About removed)
-
-// ✅ Agency-only tab
 const agencyTab = { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' };
 
 export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setActiveTab } = useUIStore();
-  const { user, client, agencyClient } = useAuthStore();
+  // ✅ Get isChildClient from store - this NEVER changes
+  const { user, client, agencyClient, isChildClient } = useAuthStore();
   const [displayName, setDisplayName] = useState('User');
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
@@ -69,28 +66,25 @@ export function MobileNav() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // ✅ Check if user is a child client (has parentClientId)
-  const isChildClient = client?.parentClientId !== null && client?.parentClientId !== undefined;
-
-  // ✅ Check if user is an agency
+  // ✅ USE isChildClient FROM STORE - NEVER CHANGES
   const isAgency = agencyClient?.isAgency || false;
 
-  // ✅ Build tabs based on user type
-  let allTabs = [...tabs];
+  // ✅ Build tabs based on isChildClient from store
+  let allTabs = [];
 
-  // ✅ Remove agents, ranking, and about for child clients
   if (isChildClient) {
-    allTabs = allTabs.filter(item => 
+    // ✅ Child client - remove agents, ranking, about
+    allTabs = tabs.filter(item => 
       item.id !== 'agents' && 
       item.id !== 'ranking' && 
       item.id !== 'about'
     );
   } else {
-    // ✅ Add About back for non-child clients
+    // ✅ Regular user or agency - show all
+    allTabs = [...tabs];
     allTabs.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
   }
 
-  // ✅ Add agency tab if user is an agency
   if (isAgency) {
     allTabs.push(agencyTab);
   }

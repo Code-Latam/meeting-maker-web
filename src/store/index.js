@@ -12,6 +12,7 @@ export const useAuthStore = create(
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      isChildClient: false, // ✅ NEW: Store whether user is a child client
       
       login: async (email, password) => {
         console.log('🔐 Login started...');
@@ -34,6 +35,11 @@ export const useAuthStore = create(
             console.error('❌ Failed to fetch /me:', meError);
           }
           
+          // ✅ Check if user is a child client
+          const isChildClient = clientData?.parentClientId !== null && 
+                               clientData?.parentClientId !== undefined;
+          localStorage.setItem('isChildClient', JSON.stringify(isChildClient));
+          
           // Store agency client if this user is an agency
           let agencyClient = null;
           if (clientData?.isAgency) {
@@ -49,11 +55,13 @@ export const useAuthStore = create(
             token: localStorage.getItem('jwt'),
             isAuthenticated: true,
             isLoading: false,
+            isChildClient: isChildClient,
           });
           
           console.log('📦 Auth state:', {
             clientName: clientData?.name,
             isAgency: clientData?.isAgency,
+            isChildClient: isChildClient,
             agencyClient: agencyClient?.name,
           });
           
@@ -70,13 +78,15 @@ export const useAuthStore = create(
         localStorage.removeItem('agencyClient');
         localStorage.removeItem('activeClientId');
         localStorage.removeItem('activeClientName');
+        localStorage.removeItem('isChildClient');
         useAppStore.getState().clearActiveClient();
         set({ 
           user: null, 
           client: null,
           agencyClient: null,
           token: null, 
-          isAuthenticated: false 
+          isAuthenticated: false,
+          isChildClient: false,
         });
       },
       
@@ -93,6 +103,7 @@ export const useAuthStore = create(
             token: null, 
             isAuthenticated: false,
             isLoading: false,
+            isChildClient: false,
           });
           return false;
         }
@@ -101,12 +112,16 @@ export const useAuthStore = create(
         
         let client = null;
         let agencyClient = null;
+        let isChildClient = false;
         
         try {
           const clientData = localStorage.getItem('client');
           if (clientData) client = JSON.parse(clientData);
           const agencyData = localStorage.getItem('agencyClient');
           if (agencyData) agencyClient = JSON.parse(agencyData);
+          // ✅ Restore isChildClient from localStorage
+          const childData = localStorage.getItem('isChildClient');
+          if (childData) isChildClient = JSON.parse(childData);
         } catch (e) {
           console.error('Error parsing client data:', e);
         }
@@ -144,6 +159,7 @@ export const useAuthStore = create(
             token,
             isAuthenticated: true,
             isLoading: false,
+            isChildClient: isChildClient,
           });
           return true;
         } else {
@@ -154,6 +170,7 @@ export const useAuthStore = create(
             token: null,
             isAuthenticated: false,
             isLoading: false,
+            isChildClient: false,
           });
           return false;
         }

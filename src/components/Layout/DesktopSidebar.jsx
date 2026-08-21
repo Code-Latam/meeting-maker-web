@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useUIStore } from '../../store';
 import { api } from '../../services/api';
 
-// ✅ Regular nav items (visible to everyone except child clients)
 const navItems = [
   { id: 'agents', icon: '🤖', label: 'Agents', path: '/' },
   { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
@@ -14,10 +13,6 @@ const navItems = [
   { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
 ];
 
-// ✅ Items hidden for child clients (About removed from here)
-// About is completely removed for child clients
-
-// ✅ Agency-only nav items
 const agencyNavItems = [
   { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' },
 ];
@@ -25,7 +20,8 @@ const agencyNavItems = [
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, user, client, agencyClient } = useAuthStore();
+  // ✅ Get isChildClient from store - this NEVER changes
+  const { logout, user, client, agencyClient, isChildClient } = useAuthStore();
   const { isSidebarOpen } = useUIStore();
   const [displayName, setDisplayName] = useState('Loading...');
   const [linkedinStatus, setLinkedinStatus] = useState({
@@ -33,32 +29,6 @@ export function DesktopSidebar() {
     status: 'checking',
     checking: true
   });
-
-  // ✅ Check if user is a child client (has parentClientId)
-  const isChildClient = client?.parentClientId !== null && client?.parentClientId !== undefined;
-
-  // ✅ Check if user is an agency
-  const isAgency = agencyClient?.isAgency || false;
-
-  // ✅ Build nav items based on user type
-  let allNavItems = [...navItems];
-
-  // ✅ Remove agents, ranking, and about for child clients
-  if (isChildClient) {
-    allNavItems = allNavItems.filter(item => 
-      item.id !== 'agents' && 
-      item.id !== 'ranking' && 
-      item.id !== 'about'
-    );
-  } else {
-    // ✅ Add About back for non-child clients (agency and regular users)
-    allNavItems.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
-  }
-
-  // ✅ Add agency items if user is an agency
-  if (isAgency) {
-    allNavItems.push(...agencyNavItems);
-  }
 
   // Update display name when client changes
   useEffect(() => {
@@ -130,6 +100,30 @@ export function DesktopSidebar() {
 
   const statusDisplay = getLinkedInStatusDisplay();
 
+  // ✅ USE isChildClient FROM STORE - NEVER CHANGES
+  const isAgency = agencyClient?.isAgency || false;
+
+  // ✅ Build nav items based on isChildClient from store
+  let allNavItems = [];
+
+  if (isChildClient) {
+    // ✅ Child client - remove agents, ranking, about
+    allNavItems = navItems.filter(item => 
+      item.id !== 'agents' && 
+      item.id !== 'ranking' && 
+      item.id !== 'about'
+    );
+  } else {
+    // ✅ Regular user or agency - show all
+    allNavItems = [...navItems];
+    allNavItems.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
+  }
+
+  // ✅ Add agency items if user is an agency
+  if (isAgency) {
+    allNavItems.push(...agencyNavItems);
+  }
+
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
       {/* Client Name Only */}
@@ -137,7 +131,6 @@ export function DesktopSidebar() {
         <p className="text-lg font-semibold text-gray-800 truncate" title={displayName}>
           {displayName}
         </p>
-        {/* ✅ Show agency badge if user is an agency */}
         {isAgency && (
           <div className="mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700">
@@ -145,7 +138,6 @@ export function DesktopSidebar() {
             </span>
           </div>
         )}
-        {/* ✅ Show child badge if user is a child client */}
         {isChildClient && (
           <div className="mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
