@@ -18,6 +18,8 @@ import { AgentCampaignsPage } from './pages/AgentCampaignsPage';
 import { MarketingCampaignsPage } from './pages/MarketingCampaignsPage';
 import { ActivityTab } from './components/Activity/ActivityTab'; 
 import { ConversionsTab } from './components/Tabs/ConversionsTab';
+// ✅ Import BlogSettingsPage
+import { BlogSettingsPage } from './pages/BlogSettingsPage';
 
 // ✅ Route Guard for child clients using isChildClient from store
 const ChildClientGuard = ({ children }) => {
@@ -108,6 +110,9 @@ function App() {
         
         {/* ✅ Agency Route - only visible to agency users (handled inside component) */}
         <Route path="agency" element={<Agency />} />
+        
+        {/* ✅ Blog Settings Route - visible to all (child clients can see blog) */}
+        <Route path="blog" element={<BlogSettingsPage />} />
         
         {/* ✅ Agent Detail Pages - all blocked for child clients */}
         <Route 

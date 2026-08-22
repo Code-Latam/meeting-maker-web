@@ -1,3 +1,5 @@
+// src/components/Layout/MobileNav.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore, useAuthStore } from '../../store';
@@ -13,13 +15,15 @@ const tabs = [
   { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
 ];
 
+// ✅ Add blog tab
+const blogTab = { id: 'blog', icon: '📝', label: 'Blog', path: '/blog' };
+
 const agencyTab = { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' };
 
 export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setActiveTab } = useUIStore();
-  // ✅ Get isChildClient from store - this NEVER changes
   const { user, client, agencyClient, isChildClient } = useAuthStore();
   const [displayName, setDisplayName] = useState('User');
   const [linkedinStatus, setLinkedinStatus] = useState({
@@ -66,23 +70,26 @@ export function MobileNav() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // ✅ USE isChildClient FROM STORE - NEVER CHANGES
   const isAgency = agencyClient?.isAgency || false;
 
   // ✅ Build tabs based on isChildClient from store
   let allTabs = [];
 
   if (isChildClient) {
-    // ✅ Child client - remove agents, ranking, about
+    // ✅ Child client - remove agents, ranking, about, blog
     allTabs = tabs.filter(item => 
       item.id !== 'agents' && 
       item.id !== 'ranking' && 
       item.id !== 'about'
     );
+    // ✅ Child clients can still see blog
+    allTabs.push(blogTab);
   } else {
     // ✅ Regular user or agency - show all
     allTabs = [...tabs];
     allTabs.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
+    // ✅ Add blog tab
+    allTabs.push(blogTab);
   }
 
   if (isAgency) {

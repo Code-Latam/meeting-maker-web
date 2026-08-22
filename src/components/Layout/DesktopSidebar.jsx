@@ -13,6 +13,9 @@ const navItems = [
   { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
 ];
 
+// ✅ Add Blog nav item
+const blogNavItem = { id: 'blog', icon: '📝', label: 'Blog & Post', path: '/blog' };
+
 const agencyNavItems = [
   { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' },
 ];
@@ -20,7 +23,6 @@ const agencyNavItems = [
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  // ✅ Get isChildClient from store - this NEVER changes
   const { logout, user, client, agencyClient, isChildClient } = useAuthStore();
   const { isSidebarOpen } = useUIStore();
   const [displayName, setDisplayName] = useState('Loading...');
@@ -100,7 +102,6 @@ export function DesktopSidebar() {
 
   const statusDisplay = getLinkedInStatusDisplay();
 
-  // ✅ USE isChildClient FROM STORE - NEVER CHANGES
   const isAgency = agencyClient?.isAgency || false;
 
   // ✅ Build nav items based on isChildClient from store
@@ -116,6 +117,13 @@ export function DesktopSidebar() {
   } else {
     // ✅ Regular user or agency - show all
     allNavItems = [...navItems];
+  }
+
+  // ✅ Add Blog nav item - visible to EVERYONE (agencies, children, regular clients)
+  allNavItems.push(blogNavItem);
+
+  // ✅ Add About - always after Blog
+  if (!isChildClient) {
     allNavItems.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
   }
 
@@ -141,7 +149,7 @@ export function DesktopSidebar() {
         {isChildClient && (
           <div className="mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-              📁 Child
+              📁 Client
             </span>
           </div>
         )}

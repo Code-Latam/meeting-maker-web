@@ -23,7 +23,7 @@ export function Agency() {
       setChildren(response.data.children || []);
     } catch (err) {
       console.error('Failed to fetch children:', err);
-      setError(err.response?.data?.error || 'Failed to load child clients');
+      setError(err.response?.data?.error || 'Failed to load clients');
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export function Agency() {
       // Show success toast or notification if you have one
     } catch (err) {
       console.error('Failed to remove child:', err);
-      alert(err.response?.data?.error || 'Failed to remove child client');
+      alert(err.response?.data?.error || 'Failed to remove client');
     } finally {
       setRemovingId(null);
     }
@@ -77,7 +77,7 @@ export function Agency() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">🏢 Agency Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Manage your child clients from one place
+            Manage your clients from one place
           </p>
         </div>
         <button
@@ -85,18 +85,18 @@ export function Agency() {
           className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 whitespace-nowrap"
         >
           <span>➕</span>
-          <span>Add Child Client</span>
+          <span>Add Client</span>
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Total Children</div>
+          <div className="text-sm text-gray-500">Total Clients</div>
           <div className="text-2xl font-bold text-gray-800">{children.length}</div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Active Children</div>
+          <div className="text-sm text-gray-500">Active Clients</div>
           <div className="text-2xl font-bold text-gray-800">
             {children.filter(c => c.status === 'active').length}
           </div>
@@ -119,7 +119,7 @@ export function Agency() {
       {/* Children List */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <h2 className="font-medium text-gray-700">Your Child Clients</h2>
+          <h2 className="font-medium text-gray-700">Your Clients</h2>
         </div>
         
         {loading ? (
@@ -129,9 +129,9 @@ export function Agency() {
         ) : children.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <div className="text-4xl mb-2">📭</div>
-            <p>No child clients added yet</p>
+            <p>No clients added yet</p>
             <p className="text-sm text-gray-400 mt-1">
-              Click "Add Child Client" to get started
+              Click "Add Client" to get started
             </p>
           </div>
         ) : (

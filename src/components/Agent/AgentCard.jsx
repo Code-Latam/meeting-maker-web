@@ -1,14 +1,13 @@
+// src/components/AgentCard.jsx
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 
-// test
-
 export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
   const navigate = useNavigate();
-  const { user, client } = useAuthStore(); // ✅ Get client from store
+  const { user, client } = useAuthStore();
   
-  // ✅ Get plan from client (not user)
   const isPremium = client?.plan === 'premium';
   const isMarketingManager = agent.role === 'Marketing Manager';
   const isSEO = agent.role === 'SEO Manager';
@@ -31,8 +30,15 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
     }
   };
 
+  // ✅ Handle blog settings navigation
+  const handleBlogSettings = (e) => {
+    e.stopPropagation();
+    navigate('/blog');
+  };
+
   const showCampaignsBtn = isPremium && !isSEO && agent.role !== 'Custom Service Representative';
   const showPersonsBtn = !isSEO;
+  const showBlogBtn = isSEO;
 
   return (
     <div 
@@ -66,6 +72,16 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
           )}
         </div>
         <div className="flex items-center gap-1">
+          {/* ✅ Blog Settings button - only for SEO Manager */}
+          {showBlogBtn && (
+            <button
+              onClick={handleBlogSettings}
+              className="p-1.5 text-gray-400 hover:text-purple-500 transition-colors rounded-lg hover:bg-purple-50"
+              title="Blog Settings"
+            >
+              📝
+            </button>
+          )}
           {showCampaignsBtn && (
             <button
               onClick={handleViewCampaigns}

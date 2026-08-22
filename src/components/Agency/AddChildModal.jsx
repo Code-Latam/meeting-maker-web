@@ -86,7 +86,7 @@ export function AddChildModal({ isOpen, onClose, onSuccess }) {
         childClientId: verifiedClient.clientId
       });
 
-      setSuccess('✅ Child client added successfully!');
+      setSuccess('✅ Client added successfully!');
       setVerified(false);
       setVerifiedClient(null);
       setEmail('');
@@ -98,8 +98,8 @@ export function AddChildModal({ isOpen, onClose, onSuccess }) {
         }, 500);
       }
     } catch (err) {
-      console.error('Failed to add child:', err);
-      let errorMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to add child client';
+      console.error('Failed to add client:', err);
+      let errorMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to add client';
       setError(errorMsg);
     } finally {
       setAdding(false);
@@ -120,7 +120,7 @@ export function AddChildModal({ isOpen, onClose, onSuccess }) {
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">
-              Add Child Client
+              Add Client
             </h2>
             <button
               onClick={handleClose}

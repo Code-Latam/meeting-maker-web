@@ -244,6 +244,11 @@ export const useUIStore = create((set) => ({
   hideToast: () => set({ toast: null }),
 }));
 
+// ============================================================
+// BLOG STORE
+// ============================================================
+export { useBlogStore } from './blogStore';
+
 // Handle window resize
 if (typeof window !== 'undefined') {
   window.addEventListener('resize', () => {
