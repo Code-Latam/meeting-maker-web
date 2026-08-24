@@ -636,6 +636,9 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
 // ============================================================
 // ARTICLE EDIT MODAL - With TipTap Editor
 // ============================================================
+// ============================================================
+// ARTICLE EDIT MODAL - With TipTap Editor
+// ============================================================
 function ArticleEditModal({ article, onClose, onSave }) {
   const [title, setTitle] = useState(article.title);
   const [excerpt, setExcerpt] = useState(article.excerpt || '');
@@ -652,6 +655,11 @@ function ArticleEditModal({ article, onClose, onSave }) {
       }),
     ],
     content: content,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4',
+      },
+    },
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML());
     },
@@ -665,6 +673,10 @@ function ArticleEditModal({ article, onClose, onSave }) {
   }, [content, editor]);
 
   const handleSubmit = async () => {
+    if (!title.trim()) {
+      alert('Title is required');
+      return;
+    }
     setSaving(true);
     try {
       await onSave(article._id, { title, content, excerpt, featuredImage });
@@ -703,7 +715,7 @@ function ArticleEditModal({ article, onClose, onSave }) {
                   editor?.isActive('bold') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Bold
+                <strong>B</strong>
               </button>
               <button
                 type="button"
@@ -712,7 +724,7 @@ function ArticleEditModal({ article, onClose, onSave }) {
                   editor?.isActive('italic') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Italic
+                <em>I</em>
               </button>
               <button
                 type="button"
@@ -739,7 +751,7 @@ function ArticleEditModal({ article, onClose, onSave }) {
                   editor?.isActive('bulletList') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Bullet List
+                • List
               </button>
               <button
                 type="button"
@@ -748,7 +760,7 @@ function ArticleEditModal({ article, onClose, onSave }) {
                   editor?.isActive('orderedList') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Numbered List
+                1. List
               </button>
               <button
                 type="button"
@@ -758,7 +770,7 @@ function ArticleEditModal({ article, onClose, onSave }) {
                 }}
                 className="px-2 py-1 rounded text-sm bg-gray-200 text-gray-700 hover:bg-gray-300"
               >
-                Add Image
+                🖼️ Image
               </button>
               <button
                 type="button"
@@ -767,10 +779,10 @@ function ArticleEditModal({ article, onClose, onSave }) {
                   editor?.isActive('blockquote') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Quote
+                " Quote
               </button>
             </div>
-            <EditorContent editor={editor} className="prose prose-sm max-w-none p-4 min-h-[300px] focus:outline-none" />
+            <EditorContent editor={editor} />
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Use the toolbar to format your content. Images can be added via URL.
@@ -830,7 +842,19 @@ function ArticleEditModal({ article, onClose, onSave }) {
 // ============================================================
 // ARTICLE VIEW MODAL - Preview rendered article
 // ============================================================
+// ============================================================
+// ARTICLE VIEW MODAL - Preview rendered article with proper formatting
+// ============================================================
 function ArticleViewModal({ article, onClose }) {
+  // Clean up content to ensure proper paragraph spacing
+  const renderContent = (html) => {
+    // If content has no styling wrapper, add one
+    if (!html.includes('class="article-content"')) {
+      return `<div class="article-content">${html}</div>`;
+    }
+    return html;
+  };
+
   return (
     <Modal
       isOpen={true}
@@ -855,8 +879,76 @@ function ArticleViewModal({ article, onClose }) {
           </p>
         )}
         <div
-          className="prose prose-sm max-w-none text-gray-800"
-          dangerouslySetInnerHTML={{ __html: article.content }}
+          className="article-preview"
+          dangerouslySetInnerHTML={{ 
+            __html: `
+              <style>
+                .article-preview {
+                  color: #333333;
+                  line-height: 1.8;
+                  font-size: 16px;
+                }
+                .article-preview h1 {
+                  font-size: 28px;
+                  font-weight: 700;
+                  margin: 24px 0 16px 0;
+                  color: #1a1a1a;
+                }
+                .article-preview h2 {
+                  font-size: 22px;
+                  font-weight: 600;
+                  margin: 20px 0 12px 0;
+                  color: #1a1a1a;
+                }
+                .article-preview h3 {
+                  font-size: 18px;
+                  font-weight: 600;
+                  margin: 16px 0 10px 0;
+                  color: #1a1a1a;
+                }
+                .article-preview p {
+                  margin: 0 0 16px 0;
+                  line-height: 1.8;
+                  color: #333333;
+                }
+                .article-preview ul {
+                  margin: 12px 0 16px 0;
+                  padding-left: 24px;
+                  list-style-type: disc;
+                }
+                .article-preview ul li {
+                  margin: 6px 0;
+                  color: #333333;
+                }
+                .article-preview ol {
+                  margin: 12px 0 16px 0;
+                  padding-left: 24px;
+                  list-style-type: decimal;
+                }
+                .article-preview ol li {
+                  margin: 6px 0;
+                  color: #333333;
+                }
+                .article-preview img {
+                  max-width: 100%;
+                  height: auto;
+                  border-radius: 8px;
+                  margin: 16px 0;
+                }
+                .article-preview blockquote {
+                  border-left: 4px solid #0ea5e9;
+                  padding: 12px 20px;
+                  margin: 16px 0;
+                  background: #f8fafc;
+                  border-radius: 0 8px 8px 0;
+                }
+                .article-preview blockquote p {
+                  margin: 0;
+                }
+              </style>
+              ${article.content}
+            `
+          }}
         />
         {article.excerpt && (
           <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
