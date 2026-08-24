@@ -12,7 +12,7 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
     setLocalStatusFilter(status);
     onFetch(1, status);
   };
-
+//
   const getStatusBadge = (status) => {
     const styles = {
       draft: 'bg-yellow-100 text-yellow-700',
