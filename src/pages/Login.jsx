@@ -81,17 +81,6 @@ export function Login() {
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
 
-          <div className="text-center text-sm text-gray-500 mt-4">
-            Don't have an account?{' '}
-            <a
-              href="https://www.meetingmaker.tech/onboarding"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-600 hover:underline"
-            >
-              Get one here
-            </a>
-          </div>
         </form>
       </div>
     </div>
