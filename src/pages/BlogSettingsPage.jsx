@@ -935,16 +935,17 @@ export function BlogSettingsPage() {
     }
   };
 
-  const handleArticleSubmit = async (articleId) => {
-    if (!confirm('Submit this article for publishing?')) return;
-    try {
-      await submitArticle(articleId);
-      await fetchArticles(articlesPage, articlesStatusFilter);
-      showToast('Article submitted for publishing!', 'success');
-    } catch (error) {
-      showToast('Failed to submit article', 'error');
-    }
-  };
+  const handleArticlePublish = async (articleId) => {
+  if (!confirm('Publish this article?')) return;
+  try {
+    // Use the existing updateArticle function to change status to published
+    await updateArticle(articleId, { status: 'published', publishedAt: new Date().toISOString() });
+    await fetchArticles(articlesPage, articlesStatusFilter);
+    showToast('Article published successfully!', 'success');
+  } catch (error) {
+    showToast('Failed to publish article', 'error');
+  }
+};
 
   // LinkedIn post handlers
   const handleLinkedInEdit = (post) => {
@@ -1080,7 +1081,7 @@ export function BlogSettingsPage() {
           statusFilter={articlesStatusFilter}
           onFetch={fetchArticles}
           onEdit={handleArticleEdit}
-          onSubmit={handleArticleSubmit}
+          onPublish={handleArticlePublish}
         />
       )}
 
@@ -1094,7 +1095,6 @@ export function BlogSettingsPage() {
           statusFilter={linkedinPostsStatusFilter}
           onFetch={fetchLinkedInPosts}
           onEdit={handleLinkedInEdit}
-          onSubmit={handleLinkedInSubmit}
           onPublish={handleLinkedInPublish}
         />
       )}
