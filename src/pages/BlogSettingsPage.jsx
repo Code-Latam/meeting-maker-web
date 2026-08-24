@@ -7,10 +7,9 @@ import { useUIStore } from '../store';
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
 import { Modal } from '../components/Common/Modal';
 
-// src/pages/BlogSettingsPage.jsx
-
-// src/pages/BlogSettingsPage.jsx - SettingsTab Component
-
+// ============================================================
+// SETTINGS TAB COMPONENT
+// ============================================================
 function SettingsTab({
   blogEnabled,
   tempTitle,
@@ -141,7 +140,7 @@ function SettingsTab({
               />
               <div>
                 <div className="font-medium text-gray-900 text-sm">Manual approval</div>
-                <p className="text-xs text-gray-500">Articles saved as drafts. Review and submit.</p>
+                <p className="text-xs text-gray-500">Articles saved as drafts. Review and publish.</p>
               </div>
             </label>
           </div>
@@ -175,7 +174,7 @@ function SettingsTab({
               />
               <div>
                 <div className="font-medium text-gray-900 text-sm">Manual approval</div>
-                <p className="text-xs text-gray-500">LinkedIn posts saved as drafts. Review and submit.</p>
+                <p className="text-xs text-gray-500">LinkedIn posts saved as drafts. Review and publish.</p>
               </div>
             </label>
           </div>
@@ -188,7 +187,7 @@ function SettingsTab({
           <div>
             <h3 className="font-semibold text-gray-900">LinkedIn Post Generation</h3>
             <p className="text-sm text-gray-500">
-              {postLinkedIn ? 'post generation is enabled' : 'post generation is disabled'}
+              {postLinkedIn ? 'Post generation is enabled' : 'Post generation is disabled'}
             </p>
           </div>
           <button
@@ -260,11 +259,10 @@ function SettingsTab({
   );
 }
 
-// src/pages/BlogSettingsPage.jsx - ArticlesTab Component
-
-// src/pages/BlogSettingsPage.jsx - ArticlesTab Component
-
-function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onSubmit }) {
+// ============================================================
+// ARTICLES TAB COMPONENT - UPDATED (No "submitted")
+// ============================================================
+function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onPublish }) {
   const [localStatusFilter, setLocalStatusFilter] = useState(statusFilter);
 
   // Sync local filter with prop when it changes
@@ -280,7 +278,6 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
   const getStatusBadge = (status) => {
     const styles = {
       draft: 'bg-yellow-100 text-yellow-700',
-      submitted: 'bg-blue-100 text-blue-700',
       published: 'bg-green-100 text-green-700',
     };
     return styles[status] || 'bg-gray-100 text-gray-700';
@@ -293,22 +290,38 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
 
   return (
     <div className="space-y-4">
-      {/* Filters - Always visible */}
+      {/* Filters - Only All, Draft, Published */}
       <div className="flex gap-2 flex-wrap">
-        {['all', 'draft', 'submitted', 'published'].map((status) => (
-          <button
-            key={status}
-            onClick={() => handleStatusFilter(status)}
-            className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-              localStatusFilter === status
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-            {localStatusFilter === 'all' && status === 'all' && ` (${total})`}
-          </button>
-        ))}
+        <button
+          onClick={() => handleStatusFilter('all')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'all'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          All ({total})
+        </button>
+        <button
+          onClick={() => handleStatusFilter('draft')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'draft'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Draft
+        </button>
+        <button
+          onClick={() => handleStatusFilter('published')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'published'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Published
+        </button>
       </div>
 
       {/* Empty State */}
@@ -318,7 +331,6 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
           <p className="text-gray-500">No articles found</p>
           <p className="text-sm text-gray-400 mt-1">
             {localStatusFilter === 'draft' && 'No draft articles waiting for review.'}
-            {localStatusFilter === 'submitted' && 'No articles pending publishing.'}
             {localStatusFilter === 'published' && 'No published articles yet.'}
             {localStatusFilter === 'all' && 'Articles will appear here once generated.'}
           </p>
@@ -357,15 +369,12 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
                           ✏️ Edit
                         </button>
                         <button
-                          onClick={() => onSubmit(article._id)}
+                          onClick={() => onPublish(article._id)}
                           className="px-3 py-1 text-sm text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
                         >
-                          📤 Submit
+                          🚀 Publish
                         </button>
                       </>
-                    )}
-                    {article.status === 'submitted' && (
-                      <span className="text-sm text-gray-400 px-3 py-1">⏳ Pending...</span>
                     )}
                     {article.status === 'published' && (
                       <span className="text-sm text-green-600 px-3 py-1">✅ Published</span>
@@ -404,10 +413,9 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
   );
 }
 
-// src/pages/BlogSettingsPage.jsx - LinkedInPostsTab Component
-
-// src/pages/BlogSettingsPage.jsx - LinkedInPostsTab Component
-
+// ============================================================
+// LINKEDIN POSTS TAB COMPONENT - UPDATED (No "submitted")
+// ============================================================
 function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onPublish }) {
   const [localStatusFilter, setLocalStatusFilter] = useState(statusFilter);
 
@@ -424,7 +432,6 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
   const getStatusBadge = (status) => {
     const styles = {
       draft: 'bg-yellow-100 text-yellow-700',
-      submitted: 'bg-blue-100 text-blue-700',
       posted: 'bg-green-100 text-green-700',
       failed: 'bg-red-100 text-red-700',
     };
@@ -438,22 +445,48 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
 
   return (
     <div className="space-y-4">
-      {/* Filters - Always visible */}
+      {/* Filters - Only All, Draft, Posted, Failed */}
       <div className="flex gap-2 flex-wrap">
-        {['all', 'draft', 'submitted', 'posted', 'failed'].map((status) => (
-          <button
-            key={status}
-            onClick={() => handleStatusFilter(status)}
-            className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-              localStatusFilter === status
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-            {localStatusFilter === 'all' && status === 'all' && ` (${total})`}
-          </button>
-        ))}
+        <button
+          onClick={() => handleStatusFilter('all')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'all'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          All ({total})
+        </button>
+        <button
+          onClick={() => handleStatusFilter('draft')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'draft'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Draft
+        </button>
+        <button
+          onClick={() => handleStatusFilter('posted')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'posted'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Posted
+        </button>
+        <button
+          onClick={() => handleStatusFilter('failed')}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            localStatusFilter === 'failed'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Failed
+        </button>
       </div>
 
       {/* Empty State */}
@@ -463,7 +496,6 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
           <p className="text-gray-500">No LinkedIn posts found</p>
           <p className="text-sm text-gray-400 mt-1">
             {localStatusFilter === 'draft' && 'No draft LinkedIn posts waiting for review.'}
-            {localStatusFilter === 'submitted' && 'No LinkedIn posts pending publishing.'}
             {localStatusFilter === 'posted' && 'No published LinkedIn posts yet.'}
             {localStatusFilter === 'all' && 'LinkedIn posts will appear here once generated.'}
           </p>
@@ -509,7 +541,6 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4 flex-shrink-0">
-                    {/* ✅ Draft - Only Edit + Publish Now (removed Submit) */}
                     {post.status === 'draft' && (
                       <>
                         <button
@@ -525,15 +556,6 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
                           🚀 Publish Now
                         </button>
                       </>
-                    )}
-                    {/* ✅ Submitted - Only Publish Now (removed Pending text) */}
-                    {post.status === 'submitted' && (
-                      <button
-                        onClick={() => onPublish(post._id)}
-                        className="px-3 py-1 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
-                      >
-                        🚀 Publish Now
-                      </button>
                     )}
                     {post.status === 'posted' && post.postUrl && (
                       <a
@@ -826,9 +848,7 @@ export function BlogSettingsPage() {
     uploadTemplate,
     removeTemplate,
     updateArticle,
-    submitArticle,
     updateLinkedInPost,
-    submitLinkedInPost,
     publishLinkedInPost,
   } = useBlogStore();
 
@@ -936,16 +956,15 @@ export function BlogSettingsPage() {
   };
 
   const handleArticlePublish = async (articleId) => {
-  if (!confirm('Publish this article?')) return;
-  try {
-    // Use the existing updateArticle function to change status to published
-    await updateArticle(articleId, { status: 'published', publishedAt: new Date().toISOString() });
-    await fetchArticles(articlesPage, articlesStatusFilter);
-    showToast('Article published successfully!', 'success');
-  } catch (error) {
-    showToast('Failed to publish article', 'error');
-  }
-};
+    if (!confirm('Publish this article?')) return;
+    try {
+      await updateArticle(articleId, { status: 'published', publishedAt: new Date().toISOString() });
+      await fetchArticles(articlesPage, articlesStatusFilter);
+      showToast('Article published successfully!', 'success');
+    } catch (error) {
+      showToast('Failed to publish article', 'error');
+    }
+  };
 
   // LinkedIn post handlers
   const handleLinkedInEdit = (post) => {
@@ -961,17 +980,6 @@ export function BlogSettingsPage() {
       showToast('LinkedIn post updated successfully!', 'success');
     } catch (error) {
       showToast('Failed to update LinkedIn post', 'error');
-    }
-  };
-
-  const handleLinkedInSubmit = async (postId) => {
-    if (!confirm('Submit this LinkedIn post for publishing?')) return;
-    try {
-      await submitLinkedInPost(postId);
-      await fetchLinkedInPosts(linkedinPostsPage, linkedinPostsStatusFilter);
-      showToast('LinkedIn post submitted for publishing!', 'success');
-    } catch (error) {
-      showToast('Failed to submit LinkedIn post', 'error');
     }
   };
 
@@ -1049,26 +1057,26 @@ export function BlogSettingsPage() {
       {/* Tab Content */}
       {activeTab === 'settings' && (
         <SettingsTab
-    blogEnabled={blogEnabled}
-    tempTitle={tempTitle}
-    setTempTitle={setTempTitle}
-    tempLayout={tempLayout}
-    setTempLayout={setTempLayout}
-    tempSsrCustomDomain={tempSsrCustomDomain}
-    setTempSsrCustomDomain={setTempSsrCustomDomain}
-    tempPublishingWorkflow={tempPublishingWorkflow}
-    setTempPublishingWorkflow={setTempPublishingWorkflow}
-    tempLinkedinWorkflow={tempLinkedinWorkflow}
-    setTempLinkedinWorkflow={setTempLinkedinWorkflow}
-    postLinkedIn={postLinkedIn}
-    linkedinTemplate={linkedinTemplate}
-    uploading={uploading}
-    onToggleBlog={handleToggleBlog}
-    onToggleLinkedIn={handleToggleLinkedIn}
-    onUploadTemplate={uploadTemplate}
-    onRemoveTemplate={removeTemplate}
-    onSaveSettings={handleSaveSettings}
-  />
+          blogEnabled={blogEnabled}
+          tempTitle={tempTitle}
+          setTempTitle={setTempTitle}
+          tempLayout={tempLayout}
+          setTempLayout={setTempLayout}
+          tempSsrCustomDomain={tempSsrCustomDomain}
+          setTempSsrCustomDomain={setTempSsrCustomDomain}
+          tempPublishingWorkflow={tempPublishingWorkflow}
+          setTempPublishingWorkflow={setTempPublishingWorkflow}
+          tempLinkedinWorkflow={tempLinkedinWorkflow}
+          setTempLinkedinWorkflow={setTempLinkedinWorkflow}
+          postLinkedIn={postLinkedIn}
+          linkedinTemplate={linkedinTemplate}
+          uploading={uploading}
+          onToggleBlog={handleToggleBlog}
+          onToggleLinkedIn={handleToggleLinkedIn}
+          onUploadTemplate={uploadTemplate}
+          onRemoveTemplate={removeTemplate}
+          onSaveSettings={handleSaveSettings}
+        />
       )}
 
       {activeTab === 'articles' && (
