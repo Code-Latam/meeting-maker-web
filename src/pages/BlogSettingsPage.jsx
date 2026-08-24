@@ -6,6 +6,9 @@ import { useBlogStore } from '../store/blogStore';
 import { useUIStore } from '../store';
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
 import { Modal } from '../components/Common/Modal';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
 
 // ============================================================
 // SETTINGS TAB COMPONENT
@@ -57,7 +60,7 @@ function SettingsTab({
         </div>
       </div>
 
-      {/* Blog Settings - KEEP Title & Layout, REMOVE Custom Domain */}
+      {/* Blog Settings */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
         <h3 className="font-semibold text-gray-900">Blog Settings</h3>
 
@@ -83,11 +86,9 @@ function SettingsTab({
             <option value="list">List</option>
           </select>
         </div>
-
-        {/* ❌ REMOVED: Custom Domain (Widget) */}
       </div>
 
-      {/* SSR Blog Settings - KEEP SSR Custom Domain, REMOVE Subdomain */}
+      {/* SSR Blog Settings */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
         <h3 className="font-semibold text-gray-900">SSR Blog (SEO Optimized)</h3>
 
@@ -104,8 +105,6 @@ function SettingsTab({
             Configure DNS: CNAME record → ssr-blog-renderer.vercel.app
           </p>
         </div>
-
-        {/* ❌ REMOVED: Subdomain field */}
       </div>
 
       {/* Publishing Workflows */}
@@ -260,12 +259,11 @@ function SettingsTab({
 }
 
 // ============================================================
-// ARTICLES TAB COMPONENT - UPDATED (No "submitted")
+// ARTICLES TAB COMPONENT
 // ============================================================
-function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onPublish }) {
+function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onPublish, onView }) {
   const [localStatusFilter, setLocalStatusFilter] = useState(statusFilter);
 
-  // Sync local filter with prop when it changes
   useEffect(() => {
     setLocalStatusFilter(statusFilter);
   }, [statusFilter]);
@@ -283,14 +281,12 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
     return styles[status] || 'bg-gray-100 text-gray-700';
   };
 
-  // Show loading state
   if (loading) {
     return <div className="text-center py-8 text-gray-500">Loading articles...</div>;
   }
 
   return (
     <div className="space-y-4">
-      {/* Filters - Only All, Draft, Published */}
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => handleStatusFilter('all')}
@@ -324,7 +320,6 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
         </button>
       </div>
 
-      {/* Empty State */}
       {articles.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
           <div className="text-4xl mb-3">📄</div>
@@ -337,7 +332,6 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
         </div>
       )}
 
-      {/* Article List */}
       {articles.length > 0 && (
         <>
           <div className="space-y-3">
@@ -374,10 +368,24 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
                         >
                           🚀 Publish
                         </button>
+                        <button
+                          onClick={() => onView(article)}
+                          className="px-3 py-1 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
+                        >
+                          👁️ View
+                        </button>
                       </>
                     )}
                     {article.status === 'published' && (
-                      <span className="text-sm text-green-600 px-3 py-1">✅ Published</span>
+                      <>
+                        <button
+                          onClick={() => onView(article)}
+                          className="px-3 py-1 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
+                        >
+                          👁️ View
+                        </button>
+                        <span className="text-sm text-green-600 px-3 py-1">✅ Published</span>
+                      </>
                     )}
                   </div>
                 </div>
@@ -385,7 +393,6 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-4 pt-4">
               <button
@@ -414,12 +421,11 @@ function ArticlesTab({ articles, loading, total, page, totalPages, statusFilter,
 }
 
 // ============================================================
-// LINKEDIN POSTS TAB COMPONENT - UPDATED (No "submitted")
+// LINKEDIN POSTS TAB COMPONENT
 // ============================================================
-function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onPublish }) {
+function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilter, onFetch, onEdit, onPublish, onView }) {
   const [localStatusFilter, setLocalStatusFilter] = useState(statusFilter);
 
-  // Sync local filter with prop when it changes
   useEffect(() => {
     setLocalStatusFilter(statusFilter);
   }, [statusFilter]);
@@ -438,14 +444,12 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
     return styles[status] || 'bg-gray-100 text-gray-700';
   };
 
-  // Show loading state
   if (loading) {
     return <div className="text-center py-8 text-gray-500">Loading LinkedIn posts...</div>;
   }
 
   return (
     <div className="space-y-4">
-      {/* Filters - Only All, Draft, Posted, Failed */}
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => handleStatusFilter('all')}
@@ -489,7 +493,6 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
         </button>
       </div>
 
-      {/* Empty State */}
       {posts.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
           <div className="text-4xl mb-3">🔗</div>
@@ -502,14 +505,12 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
         </div>
       )}
 
-      {/* LinkedIn Posts List */}
       {posts.length > 0 && (
         <>
           <div className="space-y-3">
             {posts.map((post) => (
               <div key={post._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-4">
-                  {/* Image Thumbnail */}
                   {post.imageUrl && (
                     <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                       <img
@@ -555,25 +556,49 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
                         >
                           🚀 Publish Now
                         </button>
+                        <button
+                          onClick={() => onView(post)}
+                          className="px-3 py-1 text-sm text-cyan-600 border border-cyan-200 rounded-lg hover:bg-cyan-50"
+                        >
+                          👁️ View
+                        </button>
                       </>
                     )}
-                    {post.status === 'posted' && post.postUrl && (
-                      <a
-                        href={post.postUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 text-sm text-cyan-600 border border-cyan-200 rounded-lg hover:bg-cyan-50"
-                      >
-                        👁️ View
-                      </a>
+                    {post.status === 'posted' && (
+                      <>
+                        <button
+                          onClick={() => onView(post)}
+                          className="px-3 py-1 text-sm text-cyan-600 border border-cyan-200 rounded-lg hover:bg-cyan-50"
+                        >
+                          👁️ View
+                        </button>
+                        {post.postUrl && (
+                          <a
+                            href={post.postUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 text-sm text-cyan-600 border border-cyan-200 rounded-lg hover:bg-cyan-50"
+                          >
+                            🔗 Open
+                          </a>
+                        )}
+                      </>
                     )}
                     {post.status === 'failed' && (
-                      <button
-                        onClick={() => onPublish(post._id)}
-                        className="px-3 py-1 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
-                      >
-                        🔄 Retry
-                      </button>
+                      <>
+                        <button
+                          onClick={() => onView(post)}
+                          className="px-3 py-1 text-sm text-cyan-600 border border-cyan-200 rounded-lg hover:bg-cyan-50"
+                        >
+                          👁️ View
+                        </button>
+                        <button
+                          onClick={() => onPublish(post._id)}
+                          className="px-3 py-1 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+                        >
+                          🔄 Retry
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -581,7 +606,6 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-4 pt-4">
               <button
@@ -610,14 +634,35 @@ function LinkedInPostsTab({ posts, loading, total, page, totalPages, statusFilte
 }
 
 // ============================================================
-// ARTICLE EDIT MODAL
+// ARTICLE EDIT MODAL - With TipTap Editor
 // ============================================================
 function ArticleEditModal({ article, onClose, onSave }) {
   const [title, setTitle] = useState(article.title);
-  const [content, setContent] = useState(article.content);
   const [excerpt, setExcerpt] = useState(article.excerpt || '');
   const [featuredImage, setFeaturedImage] = useState(article.featuredImage || '');
   const [saving, setSaving] = useState(false);
+  const [content, setContent] = useState(article.content);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+    ],
+    content: content,
+    onUpdate: ({ editor }) => {
+      setContent(editor.getHTML());
+    },
+  });
+
+  // Update editor content when article changes
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -649,13 +694,87 @@ function ArticleEditModal({ article, onClose, onSave }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={10}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none font-mono text-sm"
-          />
-          <p className="text-xs text-gray-500 mt-1">HTML content is supported</p>
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
+            <div className="border-b border-gray-300 p-2 flex flex-wrap gap-1 bg-gray-50">
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('bold') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Bold
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('italic') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Italic
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('heading', { level: 2 }) ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                H2
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('heading', { level: 3 }) ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                H3
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('bulletList') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Bullet List
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('orderedList') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Numbered List
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = window.prompt('Enter image URL:');
+                  if (url) editor?.chain().focus().setImage({ src: url }).run();
+                }}
+                className="px-2 py-1 rounded text-sm bg-gray-200 text-gray-700 hover:bg-gray-300"
+              >
+                Add Image
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+                className={`px-2 py-1 rounded text-sm ${
+                  editor?.isActive('blockquote') ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Quote
+              </button>
+            </div>
+            <EditorContent editor={editor} className="prose prose-sm max-w-none p-4 min-h-[300px] focus:outline-none" />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Use the toolbar to format your content. Images can be added via URL.
+          </p>
         </div>
 
         <div>
@@ -703,6 +822,135 @@ function ArticleEditModal({ article, onClose, onSave }) {
             Cancel
           </button>
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
+// ARTICLE VIEW MODAL - Preview rendered article
+// ============================================================
+function ArticleViewModal({ article, onClose }) {
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Article Preview"
+      maxWidth="xl"
+      closeOnOutsideClick={false}
+    >
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        {article.featuredImage && (
+          <img
+            src={article.featuredImage}
+            alt={article.title}
+            className="w-full max-h-64 object-cover rounded-lg"
+            onError={(e) => (e.currentTarget.style.display = 'none')}
+          />
+        )}
+        <h2 className="text-2xl font-bold text-gray-900">{article.title}</h2>
+        {article.publishedAt && (
+          <p className="text-sm text-gray-500">
+            Published: {new Date(article.publishedAt).toLocaleDateString()}
+          </p>
+        )}
+        <div
+          className="prose prose-sm max-w-none text-gray-800"
+          dangerouslySetInnerHTML={{ __html: article.content }}
+        />
+        {article.excerpt && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 font-medium">Excerpt</p>
+            <p className="text-sm text-gray-700">{article.excerpt}</p>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-3 pt-4 mt-4 border-t border-gray-200">
+        <button
+          onClick={onClose}
+          className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+        >
+          Close
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
+// LINKEDIN VIEW MODAL - Preview LinkedIn post
+// ============================================================
+function LinkedInViewModal({ post, onClose }) {
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="LinkedIn Post Preview"
+      maxWidth="lg"
+      closeOnOutsideClick={false}
+    >
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        {/* LinkedIn-style preview */}
+        <div className="border border-gray-200 rounded-lg p-4 bg-white">
+          {/* Header with user info */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-lg font-bold text-gray-600">
+              {post.clientName?.charAt(0) || 'M'}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{post.clientName || 'Meeting Maker'}</p>
+              <p className="text-sm text-gray-500">
+                {post.postedAt ? new Date(post.postedAt).toLocaleDateString() : 'Draft'}
+              </p>
+            </div>
+          </div>
+
+          {/* Post text */}
+          <div className="whitespace-pre-wrap text-gray-800 mb-4">
+            {post.text}
+          </div>
+
+          {/* Post image */}
+          {post.imageUrl && (
+            <div className="rounded-lg overflow-hidden border border-gray-200">
+              <img
+                src={post.imageUrl}
+                alt="Post image"
+                className="w-full h-auto object-cover"
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+              />
+            </div>
+          )}
+
+          {/* Status badge */}
+          <div className="mt-4 pt-3 border-t border-gray-200">
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              post.status === 'draft' ? 'bg-yellow-100 text-yellow-700' :
+              post.status === 'posted' ? 'bg-green-100 text-green-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
+            </span>
+            {post.postUrl && (
+              <a
+                href={post.postUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-3 text-sm text-cyan-600 hover:text-cyan-700"
+              >
+                View on LinkedIn →
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-4 mt-4 border-t border-gray-200">
+        <button
+          onClick={onClose}
+          className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+        >
+          Close
+        </button>
       </div>
     </Modal>
   );
@@ -864,8 +1112,10 @@ export function BlogSettingsPage() {
   // Modal states
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showArticleModal, setShowArticleModal] = useState(false);
+  const [showArticleViewModal, setShowArticleViewModal] = useState(false);
   const [selectedLinkedInPost, setSelectedLinkedInPost] = useState(null);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
+  const [showLinkedInViewModal, setShowLinkedInViewModal] = useState(false);
 
   // Load all data
   useEffect(() => {
@@ -944,6 +1194,11 @@ export function BlogSettingsPage() {
     setShowArticleModal(true);
   };
 
+  const handleArticleView = (article) => {
+    setSelectedArticle(article);
+    setShowArticleViewModal(true);
+  };
+
   const handleArticleSave = async (articleId, data) => {
     try {
       await updateArticle(articleId, data);
@@ -970,6 +1225,11 @@ export function BlogSettingsPage() {
   const handleLinkedInEdit = (post) => {
     setSelectedLinkedInPost(post);
     setShowLinkedInModal(true);
+  };
+
+  const handleLinkedInView = (post) => {
+    setSelectedLinkedInPost(post);
+    setShowLinkedInViewModal(true);
   };
 
   const handleLinkedInSave = async (postId, text) => {
@@ -1090,6 +1350,7 @@ export function BlogSettingsPage() {
           onFetch={fetchArticles}
           onEdit={handleArticleEdit}
           onPublish={handleArticlePublish}
+          onView={handleArticleView}
         />
       )}
 
@@ -1104,6 +1365,7 @@ export function BlogSettingsPage() {
           onFetch={fetchLinkedInPosts}
           onEdit={handleLinkedInEdit}
           onPublish={handleLinkedInPublish}
+          onView={handleLinkedInView}
         />
       )}
 
@@ -1116,11 +1378,25 @@ export function BlogSettingsPage() {
         />
       )}
 
+      {showArticleViewModal && selectedArticle && (
+        <ArticleViewModal
+          article={selectedArticle}
+          onClose={() => setShowArticleViewModal(false)}
+        />
+      )}
+
       {showLinkedInModal && selectedLinkedInPost && (
         <LinkedInEditModal
           post={selectedLinkedInPost}
           onClose={() => setShowLinkedInModal(false)}
           onSave={handleLinkedInSave}
+        />
+      )}
+
+      {showLinkedInViewModal && selectedLinkedInPost && (
+        <LinkedInViewModal
+          post={selectedLinkedInPost}
+          onClose={() => setShowLinkedInViewModal(false)}
         />
       )}
     </div>
