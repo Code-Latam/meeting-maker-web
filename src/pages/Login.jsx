@@ -34,7 +34,7 @@ export function Login() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-primary-600">Meeting Maker</h1>
+          <h1 className="text-2xl font-bold text-primary-600"></h1>
           <p className="text-gray-500 mt-2">Sign in to your account</p>
         </div>
 
