@@ -12,8 +12,6 @@ export const useBlogStore = create((set, get) => ({
   customDomain: '',
   ssrSubdomain: '',
   ssrCustomDomain: '',
-  postLinkedIn: false,
-  linkedinTemplate: null,
   linkedinPublishingWorkflow: 'auto',
   publishingWorkflow: 'auto',
 
@@ -33,9 +31,6 @@ export const useBlogStore = create((set, get) => ({
   linkedinPostsTotalPages: 0,
   linkedinPostsStatusFilter: 'all',
 
-  // Upload state
-  uploading: false,
-
   // Fetch all blog settings
   fetchSettings: async () => {
     try {
@@ -50,7 +45,7 @@ export const useBlogStore = create((set, get) => ({
         ssrSubdomain: data.ssrSubdomain || '',
         ssrCustomDomain: data.ssrCustomDomain || '',
         linkedinPublishingWorkflow: data.linkedinPublishingWorkflow || 'auto',
-        postLinkedIn: data.postLinkedIn || false,
+        publishingWorkflow: data.publishingWorkflow || 'auto',
       });
       return data;
     } catch (error) {
@@ -73,7 +68,7 @@ export const useBlogStore = create((set, get) => ({
         ssrSubdomain: data.ssrSubdomain || '',
         ssrCustomDomain: data.ssrCustomDomain || '',
         linkedinPublishingWorkflow: data.linkedinPublishingWorkflow || 'auto',
-        postLinkedIn: data.postLinkedIn !== undefined ? data.postLinkedIn : get().postLinkedIn,
+        publishingWorkflow: data.publishingWorkflow || 'auto',
       });
       return data;
     } catch (error) {
@@ -115,17 +110,6 @@ export const useBlogStore = create((set, get) => ({
     }
   },
 
-  // Submit article
-  submitArticle: async (articleId) => {
-    try {
-      const response = await api.post(`/blog/dashboard/articles/${articleId}/submit`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to submit article:', error);
-      throw error;
-    }
-  },
-
   // Fetch LinkedIn posts
   fetchLinkedInPosts: async (page = 1, status = 'all') => {
     set({ linkedinPostsLoading: true });
@@ -159,17 +143,6 @@ export const useBlogStore = create((set, get) => ({
     }
   },
 
-  // Submit LinkedIn post
-  submitLinkedInPost: async (postId) => {
-    try {
-      const response = await api.post(`/blog/dashboard/linkedin-posts/${postId}/submit`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to submit LinkedIn post:', error);
-      throw error;
-    }
-  },
-
   // Publish LinkedIn post
   publishLinkedInPost: async (postId) => {
     try {
@@ -177,62 +150,6 @@ export const useBlogStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       console.error('Failed to publish LinkedIn post:', error);
-      throw error;
-    }
-  },
-
-  // Toggle LinkedIn posting
-  toggleLinkedInPosting: async (enabled) => {
-    try {
-      const response = await api.put('/blog/linkedin-posting', { enabled });
-      set({ postLinkedIn: enabled });
-      return response.data;
-    } catch (error) {
-      console.error('Failed to toggle LinkedIn posting:', error);
-      throw error;
-    }
-  },
-
-  // Upload template
-  uploadTemplate: async (file) => {
-    set({ uploading: true });
-    try {
-      const formData = new FormData();
-      formData.append('template', file);
-      const response = await api.post('/blog/linkedin-template', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      set({ linkedinTemplate: response.data.imageUrl, uploading: false });
-      return response.data;
-    } catch (error) {
-      console.error('Failed to upload template:', error);
-      set({ uploading: false });
-      throw error;
-    }
-  },
-
-  // Remove template
-  removeTemplate: async () => {
-    try {
-      await api.delete('/blog/linkedin-template');
-      set({ linkedinTemplate: null });
-    } catch (error) {
-      console.error('Failed to remove template:', error);
-      throw error;
-    }
-  },
-
-  // Fetch LinkedIn template
-  fetchLinkedInTemplate: async () => {
-    try {
-      const response = await api.get('/blog/linkedin-template');
-      set({ 
-        linkedinTemplate: response.data.templateUrl || null,
-        postLinkedIn: response.data.postLinkedIn || false,
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch LinkedIn template:', error);
       throw error;
     }
   },

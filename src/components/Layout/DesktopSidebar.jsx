@@ -29,7 +29,8 @@ export function DesktopSidebar() {
     checking: true,
     unipileAccountId: null,
     canConnect: false,
-    authMethod: null
+    authMethod: null,
+    needsReconnect: false, // ✅ NEW: Track if account needs reconnection
   });
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [generatedLink, setGeneratedLink] = useState(null);
@@ -58,13 +59,20 @@ export function DesktopSidebar() {
       try {
         const response = await api.get('/api/activity/linkedin-status');
         if (response.data) {
+          // ✅ Determine if account needs reconnection
+          const needsReconnect = response.data.status === 'invalid_session' || 
+                                 response.data.status === 'disconnected' ||
+                                 response.data.status === 'orphaned' ||
+                                 response.data.status === 'error';
+          
           setLinkedinStatus({
             connected: response.data.connected || false,
             status: response.data.status || 'unknown',
             checking: false,
             unipileAccountId: response.data.unipileAccountId || null,
             canConnect: response.data.canConnect !== undefined ? response.data.canConnect : !response.data.connected,
-            authMethod: response.data.authMethod || null
+            authMethod: response.data.authMethod || null,
+            needsReconnect: needsReconnect && !!response.data.unipileAccountId,
           });
         }
       } catch (error) {
@@ -75,7 +83,8 @@ export function DesktopSidebar() {
           checking: false,
           unipileAccountId: null,
           canConnect: false,
-          authMethod: null
+          authMethod: null,
+          needsReconnect: false,
         });
       }
     };
@@ -105,26 +114,41 @@ export function DesktopSidebar() {
   console.log('📝 agencyId:', agencyId);
   console.log('📝 isAgencyViewingChild:', isAgencyViewingChild);
 
-  // ✅ Determine if we should show the connect button
-  const shouldShowConnectButton = () => {
+  // ✅ Determine which button to show (or none)
+  const getButtonConfig = () => {
     // Don't show if checking
-    if (linkedinStatus.checking) return false;
+    if (linkedinStatus.checking) return null;
     
     // Don't show if already connected
-    if (linkedinStatus.connected) return false;
+    if (linkedinStatus.connected) return null;
     
-    // Don't show if canConnect is explicitly false
-    if (linkedinStatus.canConnect === false) return false;
-    
-    // ✅ If user is an agency:
-    // - Show button ONLY if viewing a child client
-    // - Hide button if on own account
-    if (isAgency) {
-      return isAgencyViewingChild === true;
+    // ✅ Check if account needs reconnection
+    if (linkedinStatus.needsReconnect && linkedinStatus.unipileAccountId) {
+      // Agency on own account - hide reconnect
+      if (isAgency && !isAgencyViewingChild) return null;
+      
+      // Agency viewing child or regular client - show reconnect
+      return {
+        label: isAgencyViewingChild ? '🔄 Generate Reconnect Link' : '🔄 Reconnect LinkedIn',
+        onClick: handleGenerateReconnectLink,
+        isReconnect: true,
+      };
     }
     
-    // ✅ Non-agency users (regular clients, child clients direct login)
-    return true;
+    // ✅ No account at all - show connect
+    if (!linkedinStatus.unipileAccountId) {
+      // Agency on own account - hide connect
+      if (isAgency && !isAgencyViewingChild) return null;
+      
+      return {
+        label: isAgencyViewingChild ? '🔗 Generate Connection Link' : '🔗 Connect LinkedIn',
+        onClick: handleGenerateLink,
+        isReconnect: false,
+      };
+    }
+    
+    // Fallback: no button
+    return null;
   };
 
   // ✅ Generate connection link
@@ -198,7 +222,8 @@ export function DesktopSidebar() {
               checking: false,
               unipileAccountId: statusResponse.data.unipileAccountId || null,
               canConnect: statusResponse.data.canConnect !== undefined ? statusResponse.data.canConnect : !statusResponse.data.connected,
-              authMethod: statusResponse.data.authMethod || null
+              authMethod: statusResponse.data.authMethod || null,
+              needsReconnect: false,
             });
           }
         } catch (statusErr) {
@@ -207,6 +232,71 @@ export function DesktopSidebar() {
       } else {
         setLinkError(error.response?.data?.message || 'Failed to generate connection link');
       }
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  // ✅ Generate Reconnect Link
+  const handleGenerateReconnectLink = async () => {
+    console.log('🔄 Generate Reconnect Link clicked');
+    console.log('📝 isAgencyViewingChild:', isAgencyViewingChild);
+
+    let targetClientId = null;
+    
+    // If agency viewing child, use activeClientId
+    if (isAgencyViewingChild) {
+      targetClientId = activeClientId;
+      console.log('📝 Agency viewing child - targetClientId:', targetClientId);
+    } else {
+      targetClientId = client?._id || client?.id;
+      console.log('📝 Direct login - targetClientId:', targetClientId);
+    }
+    
+    if (!targetClientId) {
+      try {
+        const storedClient = localStorage.getItem('client');
+        if (storedClient) {
+          const parsedClient = JSON.parse(storedClient);
+          targetClientId = parsedClient?._id || parsedClient?.id;
+        }
+      } catch (e) {
+        console.error('Error reading client from localStorage:', e);
+      }
+    }
+    
+    if (!targetClientId) {
+      setLinkError('Unable to determine client. Please refresh and try again.');
+      return;
+    }
+    
+    console.log('✅ Final targetClientId:', targetClientId);
+    
+    setIsGeneratingLink(true);
+    setLinkError(null);
+    
+    try {
+      const response = await api.post('/linkedin/generate-reconnect-link', {
+        clientId: targetClientId
+      });
+      
+      if (response.data.success) {
+        if (isAgencyViewingChild) {
+          // ✅ Agency viewing child - show link in modal
+          console.log('✅ Showing reconnect link in modal');
+          setGeneratedLink(response.data.url);
+          setShowLinkModal(true);
+        } else {
+          // ✅ Child or regular client - redirect to Unipile
+          console.log('✅ Redirecting to Unipile for reconnect');
+          window.location.href = response.data.url;
+        }
+      } else {
+        setLinkError(response.data.message || 'Failed to generate reconnect link');
+      }
+    } catch (error) {
+      console.error('Error generating reconnect link:', error);
+      setLinkError(error.response?.data?.message || 'Failed to generate reconnect link');
     } finally {
       setIsGeneratingLink(false);
     }
@@ -277,7 +367,7 @@ export function DesktopSidebar() {
     allNavItems.push(...agencyNavItems);
   }
 
-  const showConnectButton = shouldShowConnectButton();
+  const buttonConfig = getButtonConfig();
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
@@ -302,7 +392,7 @@ export function DesktopSidebar() {
         )}
       </div>
       
-      {/* LinkedIn Status + Connect Button */}
+      {/* LinkedIn Status + Connect/Reconnect Button */}
       <div className="px-4 py-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-500">🔗 LinkedIn</span>
@@ -314,16 +404,18 @@ export function DesktopSidebar() {
           </div>
         </div>
         
-        {/* ✅ Connect Button */}
-        {showConnectButton && (
+        {/* ✅ Connect / Reconnect Button */}
+        {buttonConfig && (
           <div className="mt-2">
             <button
-              onClick={handleGenerateLink}
+              onClick={buttonConfig.onClick}
               disabled={isGeneratingLink}
               className={`w-full text-xs py-1.5 px-3 rounded-lg transition-colors ${
                 isGeneratingLink 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-primary-600 hover:bg-primary-700 text-white'
+                  : buttonConfig.isReconnect 
+                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                    : 'bg-primary-600 hover:bg-primary-700 text-white'
               }`}
             >
               {isGeneratingLink ? (
@@ -332,7 +424,7 @@ export function DesktopSidebar() {
                   Generating...
                 </>
               ) : (
-                isAgencyViewingChild ? '🔗 Generate Connection Link' : '🔗 Connect LinkedIn'
+                buttonConfig.label
               )}
             </button>
             {linkError && (
@@ -380,10 +472,13 @@ export function DesktopSidebar() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              🔗 LinkedIn Connection Link
+              {buttonConfig?.isReconnect ? '🔄 LinkedIn Reconnect Link' : '🔗 LinkedIn Connection Link'}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Share this link with the client so they can connect their LinkedIn account:
+              {buttonConfig?.isReconnect 
+                ? 'Share this link with the client so they can reconnect their LinkedIn account:'
+                : 'Share this link with the client so they can connect their LinkedIn account:'
+              }
             </p>
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
               <p className="text-xs text-gray-700 break-all font-mono">{generatedLink}</p>

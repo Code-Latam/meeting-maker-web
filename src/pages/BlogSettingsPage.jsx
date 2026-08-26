@@ -25,13 +25,7 @@ function SettingsTab({
   setTempPublishingWorkflow,
   tempLinkedinWorkflow,
   setTempLinkedinWorkflow,
-  postLinkedIn,
-  linkedinTemplate,
-  uploading,
   onToggleBlog,
-  onToggleLinkedIn,
-  onUploadTemplate,
-  onRemoveTemplate,
   onSaveSettings,
 }) {
   return (
@@ -180,72 +174,6 @@ function SettingsTab({
         </div>
       </div>
 
-      {/* LinkedIn Auto-Posting */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-gray-900">LinkedIn Post Generation</h3>
-            <p className="text-sm text-gray-500">
-              {postLinkedIn ? 'Post generation is enabled' : 'Post generation is disabled'}
-            </p>
-          </div>
-          <button
-            onClick={onToggleLinkedIn}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              postLinkedIn ? 'bg-primary-600' : 'bg-gray-300'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                postLinkedIn ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </div>
-
-        {postLinkedIn && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Post Template Image</label>
-            <p className="text-xs text-gray-500 mb-3">
-              Upload a 1200×628 pixel image for your LinkedIn posts.
-            </p>
-
-            {linkedinTemplate ? (
-              <div className="flex items-center gap-4">
-                <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                  <img src={linkedinTemplate} alt="Template" className="w-full h-full object-cover" />
-                </div>
-                <button
-                  onClick={onRemoveTemplate}
-                  className="text-sm text-red-600 hover:text-red-700"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  id="template-upload"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) onUploadTemplate(file);
-                  }}
-                />
-                <label
-                  htmlFor="template-upload"
-                  className="cursor-pointer text-primary-600 hover:text-primary-700"
-                >
-                  {uploading ? 'Uploading...' : 'Click to upload a template image'}
-                </label>
-                <p className="text-xs text-gray-500 mt-2">JPG, PNG, or WebP (max 5MB)</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Save Button */}
       <button
@@ -1163,9 +1091,6 @@ export function BlogSettingsPage() {
     ssrCustomDomain,
     publishingWorkflow,
     linkedinPublishingWorkflow,
-    postLinkedIn,
-    linkedinTemplate,
-    uploading,
     articles,
     articlesLoading,
     articlesTotal,
@@ -1181,12 +1106,8 @@ export function BlogSettingsPage() {
     fetchSettings,
     fetchArticles,
     fetchLinkedInPosts,
-    fetchLinkedInTemplate,
     updateSettings,
     toggleBlog,
-    toggleLinkedInPosting,
-    uploadTemplate,
-    removeTemplate,
     updateArticle,
     updateLinkedInPost,
     publishLinkedInPost,
@@ -1216,7 +1137,6 @@ export function BlogSettingsPage() {
       try {
         await Promise.all([
           fetchSettings(),
-          fetchLinkedInTemplate(),
           fetchArticles(1, 'all'),
           fetchLinkedInPosts(1, 'all'),
         ]);
@@ -1267,16 +1187,6 @@ export function BlogSettingsPage() {
       showToast(`Blog ${!blogEnabled ? 'enabled' : 'disabled'} successfully`, 'success');
     } catch (error) {
       showToast('Failed to toggle blog', 'error');
-    }
-  };
-
-  // Handle LinkedIn toggle
-  const handleToggleLinkedIn = async () => {
-    try {
-      await toggleLinkedInPosting(!postLinkedIn);
-      showToast(`LinkedIn posting ${!postLinkedIn ? 'enabled' : 'disabled'}`, 'success');
-    } catch (error) {
-      showToast('Failed to toggle LinkedIn posting', 'error');
     }
   };
 
@@ -1420,13 +1330,7 @@ export function BlogSettingsPage() {
           setTempPublishingWorkflow={setTempPublishingWorkflow}
           tempLinkedinWorkflow={tempLinkedinWorkflow}
           setTempLinkedinWorkflow={setTempLinkedinWorkflow}
-          postLinkedIn={postLinkedIn}
-          linkedinTemplate={linkedinTemplate}
-          uploading={uploading}
           onToggleBlog={handleToggleBlog}
-          onToggleLinkedIn={handleToggleLinkedIn}
-          onUploadTemplate={uploadTemplate}
-          onRemoveTemplate={removeTemplate}
           onSaveSettings={handleSaveSettings}
         />
       )}
