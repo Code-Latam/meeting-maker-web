@@ -115,6 +115,18 @@ export function AgentCampaignsPage() {
     });
   };
 
+      const handleHeadcountToggle = (rangeId) => {
+      setSearchFormData(prev => {
+        const current = prev.headcount;
+        const index = current.indexOf(rangeId);
+        if (index > -1) {
+          return { ...prev, headcount: current.filter(id => id !== rangeId) };
+        } else {
+          return { ...prev, headcount: [...current, rangeId] };
+        }
+      });
+    };
+
   const handleOpenToWorkOptionToggle = (option) => {
     setSearchFormData(prev => {
       const current = prev.openToWorkOptions;
@@ -247,6 +259,7 @@ const handleSearchSubmit = async (e) => {
       titles,
       locations: searchFormData.locations,
       industries: searchFormData.industries,
+      headcount: searchFormData.headcount, 
       connectionDegree: parseInt(searchFormData.connectionDegree),
       openToWork: searchFormData.openToWork,
       hiring: searchFormData.hiring,
@@ -326,7 +339,8 @@ const handleSearchSubmit = async (e) => {
       hiring: false,
       openToWorkOptions: [],
       locations: [],
-      industries: []
+      industries: [],
+      headcount: []
     });
   };
 
@@ -765,6 +779,40 @@ const handleSearchSubmit = async (e) => {
               )}
             </div>
             <p className="text-xs text-gray-500 mt-1">Select industries to target</p>
+          </div>
+
+          {/* Headcount */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Company Headcount
+            </label>
+            <div className="border border-gray-300 rounded-lg p-2 max-h-32 overflow-y-auto">
+              {[
+                { id: '1', label: 'Self-employed' },
+                { id: '1-10', label: '1-10' },
+                { id: '11-50', label: '11-50' },
+                { id: '51-200', label: '51-200' },
+                { id: '201-500', label: '201-500' },
+                { id: '501-1000', label: '501-1,000' },
+                { id: '1001-5000', label: '1,001-5,000' },
+                { id: '5001-10000', label: '5,001-10,000' },
+                { id: '10001+', label: '10,001+' }
+              ].map((range) => (
+                <label key={range.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={searchFormData.headcount.includes(range.id)}
+                    onChange={() => handleHeadcountToggle(range.id)}
+                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">{range.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Select headcount ranges to target. Leave empty for any size.</p>
+            <p className="text-xs text-yellow-600 mt-1">
+              ⚠️ Note: Headcount data may not be available for all companies. Leads without headcount data will still be added.
+            </p>
           </div>
 
           {/* Connection Degree */}

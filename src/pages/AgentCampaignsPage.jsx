@@ -408,25 +408,70 @@ const handleSearchSubmit = async (e) => {
     return classes[status] || 'bg-gray-100 text-gray-700';
   };
 
-  const renderSearchCampaigns = () => {
-    if (searchCampaigns.length === 0) {
-      return (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-          <div className="text-4xl mb-3">🔍</div>
-          <p className="text-gray-500">No search campaigns yet</p>
-          <button
-            onClick={() => { setModalType('search'); setIsModalOpen(true); }}
-            className="mt-3 btn-primary text-sm"
-          >
-            + Create Campaign
-          </button>
-        </div>
-      );
-    }
-
+const renderSearchCampaigns = () => {
+  if (searchCampaigns.length === 0) {
     return (
-      <div className="space-y-4">
-        {searchCampaigns.map((campaign) => (
+      <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+        <div className="text-4xl mb-3">🔍</div>
+        <p className="text-gray-500">No search campaigns yet</p>
+        <button
+          onClick={() => { setModalType('search'); setIsModalOpen(true); }}
+          className="mt-3 btn-primary text-sm"
+        >
+          + Create Campaign
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {searchCampaigns.map((campaign) => {
+        // ✅ Use 'locations' and 'industries' from state (not locationsList/industriesList)
+        
+        // Format display values
+        const keywords = campaign.searchCriteria?.keywords?.join(', ') || 'Any';
+        const titles = campaign.searchCriteria?.titles?.join(', ') || 'Any';
+        
+        // ✅ Map location IDs to names using 'locations' state
+        const locationsDisplay = campaign.searchCriteria?.locations?.length > 0 
+          ? campaign.searchCriteria.locations.map(locId => {
+              const location = locations.find(l => l.id === locId);
+              return location ? (location.title || location.name || locId) : locId;
+            }).join(', ')
+          : 'Any';
+        
+        // ✅ Map industry IDs to names using 'industries' state
+        const industriesDisplay = campaign.searchCriteria?.industries?.length > 0
+          ? campaign.searchCriteria.industries.map(indId => {
+              const industry = industries.find(i => i.id === indId);
+              return industry ? (industry.title || industry.name || indId) : indId;
+            }).join(', ')
+          : 'Any';
+        
+        const headcountLabels = {
+          '1': 'Self-employed',
+          '1-10': '1-10',
+          '11-50': '11-50',
+          '51-200': '51-200',
+          '201-500': '201-500',
+          '501-1000': '501-1,000',
+          '1001-5000': '1,001-5,000',
+          '5001-10000': '5,001-10,000',
+          '10001+': '10,001+'
+        };
+        const headcount = campaign.searchCriteria?.headcount?.length > 0
+          ? campaign.searchCriteria.headcount.map(h => headcountLabels[h] || h).join(', ')
+          : 'Any';
+        const connectionDegree = campaign.searchCriteria?.connectionDegree || 2;
+        const minConfidence = Math.round((campaign.icpCriteria?.minConfidence || 0.6) * 100);
+        const openToWork = campaign.searchCriteria?.openToWork ? '✅ Yes' : '❌ No';
+        const hiring = campaign.searchCriteria?.hiring ? '✅ Yes' : '❌ No';
+        const openToWorkOptions = campaign.searchCriteria?.openToWorkOptions?.length > 0
+          ? campaign.searchCriteria.openToWorkOptions.join(', ')
+          : 'None';
+
+        return (
           <div key={campaign._id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between">
               <div>
@@ -440,25 +485,75 @@ const handleSearchSubmit = async (e) => {
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+            {/* Enhanced Campaign Details */}
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
               <div>
-                <span className="text-gray-500">Keywords:</span>
-                <span className="ml-1 text-gray-700">{campaign.searchCriteria?.keywords?.join(', ') || 'Any'}</span>
+                <span className="text-gray-500">🔑 Keywords:</span>
+                <span className="ml-1 text-gray-700 font-medium">{keywords}</span>
               </div>
               <div>
-                <span className="text-gray-500">Daily Limit:</span>
-                <span className="ml-1 text-gray-700">{campaign.dailyLimit}</span>
+                <span className="text-gray-500">💼 Title:</span>
+                <span className="ml-1 text-gray-700 font-medium">{titles}</span>
               </div>
               <div>
-                <span className="text-gray-500">Today:</span>
-                <span className="ml-1 text-gray-700">{campaign.dailyProcessed || 0}</span>
+                <span className="text-gray-500">📍 Location:</span>
+                <span className="ml-1 text-gray-700 font-medium">{locationsDisplay}</span>
               </div>
               <div>
-                <span className="text-gray-500">Leads Added:</span>
-                <span className="ml-1 text-gray-700">{campaign.stats?.leadsAdded || 0}</span>
+                <span className="text-gray-500">🏢 Industry:</span>
+                <span className="ml-1 text-gray-700 font-medium">{industriesDisplay}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">👥 Headcount:</span>
+                <span className="ml-1 text-gray-700 font-medium">{headcount}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">🔗 Connection:</span>
+                <span className="ml-1 text-gray-700 font-medium">{connectionDegree}°</span>
+              </div>
+              <div>
+                <span className="text-gray-500">🎯 AI Confidence:</span>
+                <span className="ml-1 text-gray-700 font-medium">{minConfidence}%</span>
+              </div>
+              <div>
+                <span className="text-gray-500">📊 Open to Work:</span>
+                <span className="ml-1 text-gray-700 font-medium">{openToWork}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">🏢 Hiring:</span>
+                <span className="ml-1 text-gray-700 font-medium">{hiring}</span>
               </div>
             </div>
 
+            {/* Open to Work Options (if any) */}
+            {campaign.searchCriteria?.openToWork && campaign.searchCriteria?.openToWorkOptions?.length > 0 && (
+              <div className="mt-1 text-xs text-gray-500">
+                <span className="text-gray-400">Open to Work Options:</span>
+                <span className="ml-1 text-gray-600">{openToWorkOptions}</span>
+              </div>
+            )}
+
+            {/* Stats Row */}
+            <div className="mt-3 grid grid-cols-4 gap-2 text-sm border-t border-gray-100 pt-3">
+              <div>
+                <span className="text-gray-500">📊 Found:</span>
+                <span className="ml-1 text-gray-700 font-medium">{campaign.stats?.leadsFound || 0}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">✅ Qualified:</span>
+                <span className="ml-1 text-gray-700 font-medium">{campaign.stats?.leadsQualified || 0}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">➕ Added:</span>
+                <span className="ml-1 text-gray-700 font-medium">{campaign.stats?.leadsAdded || 0}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">📅 Today:</span>
+                <span className="ml-1 text-gray-700 font-medium">{campaign.dailyProcessed || 0} / {campaign.dailyLimit}</span>
+              </div>
+            </div>
+
+            {/* Actions */}
             <div className="mt-3 flex gap-2 justify-end">
               <button
                 onClick={() => handleToggle(campaign._id, campaign.status)}
@@ -474,10 +569,11 @@ const handleSearchSubmit = async (e) => {
               </button>
             </div>
           </div>
-        ))}
-      </div>
-    );
-  };
+        );
+      })}
+    </div>
+  );
+};
 
   const renderPostCampaigns = () => {
     if (postCampaigns.length === 0) {
