@@ -686,61 +686,115 @@ const handleSearchInfluencers = async () => {
     );
   };
 
-  const renderMarketConnectionsCampaigns = () => {
-    if (marketConnectionsCampaigns.length === 0) {
-      return (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-          <div className="text-4xl mb-3">🔗</div>
-          <p className="text-gray-500">No message to connections campaigns yet</p>
-          <button
-            onClick={() => { setModalType('marketconnections'); setIsModalOpen(true); }}
-            className="mt-3 btn-primary text-sm"
-          >
-            + Create Campaign
-          </button>
-        </div>
-      );
-    }
-
+ const renderMarketConnectionsCampaigns = () => {
+  if (marketConnectionsCampaigns.length === 0) {
     return (
-      <div className="space-y-4">
-        {marketConnectionsCampaigns.map((campaign) => renderCampaignCard(campaign, 'marketconnections', [
-          campaign.status !== 'completed' && (
-            <button
-              key="toggle"
-              onClick={() => handleToggleMarketConnections(campaign._id, campaign.status)}
-              className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              {campaign.status === 'active' ? '⏸️ Pause' : '▶️ Resume'}
-            </button>
-          ),
-          campaign.status !== 'completed' && (
-            <button
-              key="complete"
-              onClick={() => handleCompleteMarketConnections(campaign._id)}
-              className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              🏁 Complete
-            </button>
-          ),
-          <button
-            key="rename"
-            onClick={() => handleRenameMarketConnections(campaign)}
-            className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            ✏️ Rename
-          </button>,
-          <button
-            key="delete"
-            onClick={() => handleDeleteMarketConnections(campaign._id)}
-            className="px-3 py-1 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            🗑️ Delete
-          </button>
-        ]))}
+      <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+        <div className="text-4xl mb-3">🔗</div>
+        <p className="text-gray-500">No message to connections campaigns yet</p>
+        <button
+          onClick={() => { setModalType('marketconnections'); setIsModalOpen(true); }}
+          className="mt-3 btn-primary text-sm"
+        >
+          + Create Campaign
+        </button>
       </div>
     );
-  };
+  }
+
+  return (
+    <div className="space-y-4">
+      {marketConnectionsCampaigns.map((campaign) => (
+        <div key={campaign._id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
+              <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${getStatusClass(campaign.status)}`}>
+                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+              </span>
+            </div>
+          </div>
+
+          {/* ✅ Show Keywords */}
+          {campaign.keywords && campaign.keywords.length > 0 && (
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">Keywords:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {campaign.keywords.map((kw, i) => (
+                  <span key={i} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Show Message Template */}
+          {campaign.messageTemplate && (
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">Message Template:</span>
+              <div className="mt-1 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-gray-200">
+                {campaign.messageTemplate.length > 100 
+                  ? campaign.messageTemplate.substring(0, 100) + '...' 
+                  : campaign.messageTemplate}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+            <div>
+              <span className="text-gray-500">Daily Limit:</span>
+              <span className="ml-1 text-gray-700">{campaign.dailyLimit || 50}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Today:</span>
+              <span className="ml-1 text-gray-700">{campaign.dailyProcessed || 0}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Found:</span>
+              <span className="ml-1 text-gray-700">{campaign.stats?.connectionsFound || 0}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Messages Sent:</span>
+              <span className="ml-1 text-gray-700">{campaign.stats?.messagesSent || 0}</span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-2 justify-end flex-wrap">
+            {campaign.status !== 'completed' && (
+              <>
+                <button
+                  onClick={() => handleToggleMarketConnections(campaign._id, campaign.status)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {campaign.status === 'active' ? '⏸️ Pause' : '▶️ Resume'}
+                </button>
+                <button
+                  onClick={() => handleCompleteMarketConnections(campaign._id)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  🏁 Complete
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => handleRenameMarketConnections(campaign)}
+              className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              ✏️ Rename
+            </button>
+            <button
+              onClick={() => handleDeleteMarketConnections(campaign._id)}
+              className="px-3 py-1 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
   if (loading) {
     return <LoadingSpinner />;
