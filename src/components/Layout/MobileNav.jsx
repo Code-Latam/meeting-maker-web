@@ -10,13 +10,15 @@ const tabs = [
   { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
   { id: 'conversions', icon: '🎯', label: 'Conversions', path: '/conversions' },
   { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard' },
+  { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
+  { id: 'blog', icon: '📝', label: 'Blog', path: '/blog' },
   { id: 'boost', icon: '🚀', label: 'Boost', path: '/boost' },
   { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' },
-  { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
+  { id: 'templates', icon: '📝', label: 'Templates', path: '/templates' }
 ];
 
 // ✅ Add blog tab
-const blogTab = { id: 'blog', icon: '📝', label: 'Blog', path: '/blog' };
+
 
 const agencyTab = { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' };
 
@@ -83,7 +85,6 @@ export function MobileNav() {
       item.id !== 'about'
     );
     // ✅ Child clients can still see blog
-    allTabs.push(blogTab);
   } else {
     // ✅ Regular user or agency - show all
     allTabs = [...tabs];

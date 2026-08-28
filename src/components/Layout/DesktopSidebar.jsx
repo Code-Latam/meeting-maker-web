@@ -8,12 +8,15 @@ const navItems = [
   { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
   { id: 'conversions', icon: '🎯', label: 'Conversions', path: '/conversions' },
   { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard' },
+  { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
+  { id: 'blog', icon: '📝', label: 'Blog & Post', path: '/blog' },
   { id: 'boost', icon: '🚀', label: 'Boost', path: '/boost' },
   { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' },
-  { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
+  { id: 'templates', icon: '📝', label: 'Templates', path: '/templates' }
+  
 ];
 
-const blogNavItem = { id: 'blog', icon: '📝', label: 'Blog & Post', path: '/blog' };
+
 const agencyNavItems = [{ id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' }];
 
 export function DesktopSidebar() {
@@ -357,7 +360,6 @@ export function DesktopSidebar() {
     allNavItems = [...navItems];
   }
 
-  allNavItems.push(blogNavItem);
 
   if (!isChildClient) {
     allNavItems.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
