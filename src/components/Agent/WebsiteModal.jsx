@@ -47,10 +47,12 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     try {
       // ✅ Use api instead of fetch
       const response = await api.post('/api/websites', {
-        url: url.trim(),
-        forceRefresh: true,
-        isPrimary: false
-      });
+    url: url.trim(),
+    forceRefresh: true,
+    isPrimary: false
+  }, {
+    timeout: 180000  // ✅ Increase to 60 seconds (or 120000 for 2 minutes)
+  });
 
       const data = response.data;
 
