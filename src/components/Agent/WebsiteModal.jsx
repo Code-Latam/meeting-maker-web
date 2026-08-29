@@ -51,7 +51,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     forceRefresh: true,
     isPrimary: false
   }, {
-    timeout: 180000  // ✅ Increase to 60 seconds (or 120000 for 2 minutes)
+    timeout: 600000  // 
   });
 
       const data = response.data;
