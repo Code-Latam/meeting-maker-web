@@ -29,11 +29,12 @@ export function TemplatesPage() {
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/templates');
+      // ✅ FIX: Added /api prefix
+      const response = await api.get('/api/templates');
       setTemplates(response.data.templates || []);
     } catch (error) {
       console.error('Failed to load templates:', error);
-      showToast('Failed to load templates', 'error');
+      showToast(error.response?.data?.error || 'Failed to load templates', 'error');
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,8 @@ export function TemplatesPage() {
 
     setSaving(true);
     try {
-      const response = await api.post('/templates', formData);
+      // ✅ FIX: Added /api prefix
+      await api.post('/api/templates', formData);
       showToast('Template created successfully', 'success');
       setIsModalOpen(false);
       resetForm();
@@ -70,7 +72,8 @@ export function TemplatesPage() {
 
     setSaving(true);
     try {
-      const response = await api.put(`/templates/${editingTemplate._id}`, formData);
+      // ✅ FIX: Added /api prefix
+      await api.put(`/api/templates/${editingTemplate._id}`, formData);
       showToast('Template updated successfully', 'success');
       setIsModalOpen(false);
       resetForm();
@@ -87,7 +90,8 @@ export function TemplatesPage() {
     if (!confirm(`Delete template "${template.name}"? This cannot be undone.`)) return;
     
     try {
-      await api.delete(`/templates/${template._id}`);
+      // ✅ FIX: Added /api prefix
+      await api.delete(`/api/templates/${template._id}`);
       showToast('Template deleted', 'success');
       await loadTemplates();
     } catch (error) {
@@ -98,7 +102,8 @@ export function TemplatesPage() {
 
   const handleSetDefault = async (template) => {
     try {
-      await api.put(`/templates/${template._id}/default`);
+      // ✅ FIX: Added /api prefix
+      await api.put(`/api/templates/${template._id}/default`);
       showToast(`${template.name} set as default`, 'success');
       await loadTemplates();
     } catch (error) {
@@ -132,30 +137,9 @@ export function TemplatesPage() {
     setEditingTemplate(null);
   };
 
-  // Extract variables from template
-  const extractVariables = (template) => {
-    const matches = template.match(/\{\{([^}]+)\}\}/g);
-    if (!matches) return [];
-    return matches.map(m => m.replace(/\{\{|\}\}/g, ''));
-  };
-
   // Preview template with sample data
   const previewTemplate = (template) => {
-    const sampleData = {
-      firstName: 'John',
-      lastName: 'Doe',
-      fullName: 'John Doe',
-      company: 'Acme Corp',
-      title: 'VP of Sales',
-      industry: 'Technology',
-      location: 'San Francisco'
-    };
-
-    let preview = template;
-    Object.entries(sampleData).forEach(([key, value]) => {
-      preview = preview.replace(new RegExp(`{{${key}}}`, 'g'), value);
-    });
-    return preview;
+    return template.replace(/{firstName}/g, 'John');
   };
 
   if (loading) {
@@ -173,7 +157,7 @@ export function TemplatesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">📝 Message Templates</h1>
           <p className="text-sm text-gray-500">
-            Create and manage message templates for your campaigns. Templates can be used across all agents and campaigns.
+            Create and manage message templates for your campaigns.
           </p>
         </div>
         <button
@@ -212,9 +196,7 @@ export function TemplatesPage() {
       ) : (
         <div className="space-y-4">
           {templates.map((template) => {
-            const variables = extractVariables(template.template);
             const preview = previewTemplate(template.template);
-            const isUsed = template.usageCount > 0;
 
             return (
               <div key={template._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -228,11 +210,6 @@ export function TemplatesPage() {
                       {!template.isActive && (
                         <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inactive</span>
                       )}
-                      {isUsed && (
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                          Used in {template.usageCount} campaign{template.usageCount !== 1 ? 's' : ''}
-                        </span>
-                      )}
                     </div>
 
                     {/* Template preview */}
@@ -241,17 +218,13 @@ export function TemplatesPage() {
                       <div className="text-sm text-gray-700 whitespace-pre-wrap">{template.template}</div>
                     </div>
 
-                    {/* Variables and preview */}
-                    {variables.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="text-xs text-gray-500">Variables:</span>
-                        {variables.map((v, i) => (
-                          <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                            {`{{${v}}}`}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Variable indicator */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="text-xs text-gray-500">Variable:</span>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                        {`{firstName}`}
+                      </span>
+                    </div>
 
                     {/* Preview with sample data */}
                     <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
@@ -261,7 +234,6 @@ export function TemplatesPage() {
 
                     <div className="mt-2 text-xs text-gray-400">
                       Created: {new Date(template.createdAt).toLocaleDateString()}
-                      {template.lastUsedAt && ` · Last used: ${new Date(template.lastUsedAt).toLocaleDateString()}`}
                     </div>
                   </div>
 
@@ -312,7 +284,7 @@ export function TemplatesPage() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              placeholder="e.g., Cold Outreach - SaaS"
+              placeholder="e.g., Cold Outreach"
               required
             />
           </div>
@@ -326,39 +298,36 @@ export function TemplatesPage() {
               onChange={(e) => setFormData({ ...formData, template: e.target.value })}
               rows={6}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none font-mono text-sm"
-              placeholder="Hi {{firstName}}, I noticed you're at {{company}}..."
+              placeholder="Hi {firstName}, I noticed you're a great fit for..."
               required
             />
             <div className="mt-2">
-              <span className="text-xs text-gray-500">Available variables:</span>
+              <span className="text-xs text-gray-500">Available variable:</span>
               <div className="flex flex-wrap gap-1 mt-1">
-                {['firstName', 'lastName', 'fullName', 'company', 'title', 'industry', 'location'].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => {
-                      const textarea = document.querySelector('textarea');
-                      if (textarea) {
-                        const start = textarea.selectionStart;
-                        const end = textarea.selectionEnd;
-                        const newText = formData.template.substring(0, start) + `{{${v}}}` + formData.template.substring(end);
-                        setFormData({ ...formData, template: newText });
-                        setTimeout(() => {
-                          textarea.focus();
-                          textarea.selectionStart = start + v.length + 4;
-                          textarea.selectionEnd = start + v.length + 4;
-                        }, 10);
-                      }
-                    }}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors"
-                  >
-                    {`{{${v}}}`}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const textarea = document.querySelector('textarea');
+                    if (textarea) {
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const newText = formData.template.substring(0, start) + `{firstName}` + formData.template.substring(end);
+                      setFormData({ ...formData, template: newText });
+                      setTimeout(() => {
+                        textarea.focus();
+                        textarea.selectionStart = start + 11;
+                        textarea.selectionEnd = start + 11;
+                      }, 10);
+                    }
+                  }}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors"
+                >
+                  {`{firstName}`}
+                </button>
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Click a variable to insert it at the cursor position.
+              Click the variable to insert it at the cursor position. It will be replaced with the person's first name.
             </p>
           </div>
 

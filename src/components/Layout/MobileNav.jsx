@@ -90,7 +90,6 @@ export function MobileNav() {
     allTabs = [...tabs];
     allTabs.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
     // ✅ Add blog tab
-    allTabs.push(blogTab);
   }
 
   if (isAgency) {
