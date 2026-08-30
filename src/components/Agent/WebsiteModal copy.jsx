@@ -1,5 +1,8 @@
+// src/components/WebsiteModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useUIStore } from '../../store';
+import { api } from '../../services/api';  // ✅ Use api instead of fetch
 import { Modal } from '../Common/Modal';
 
 export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
@@ -42,30 +45,16 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     setWebsiteData(null);
 
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) {
-        showToast('You must be logged in', 'error');
-        return;
-      }
+      // ✅ Use api instead of fetch
+      const response = await api.post('/api/websites', {
+    url: url.trim(),
+    forceRefresh: true,
+    isPrimary: false
+  }, {
+    timeout: 600000  // 
+  });
 
-      const response = await fetch('https://api.meetingmaker.tech/api/websites', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          url: url.trim(),
-          forceRefresh: true,
-          isPrimary: false
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to fetch website information');
-      }
+      const data = response.data;
 
       if (!data.success) {
         throw new Error(data.message || 'Failed to fetch website information');
@@ -81,8 +70,9 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
 
     } catch (err) {
       console.error('Error fetching website:', err);
-      setError(err.message || 'Failed to fetch website information');
-      showToast(err.message || 'Failed to fetch website information', 'error');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch website information';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
       setIsFetching(false);
@@ -130,7 +120,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       onClose={handleClose} 
       title="🌐 Website Information" 
       maxWidth="lg"
-      closeOnOutsideClick={false}  // ✅ Prevent accidental close while typing
+      closeOnOutsideClick={false}
     >
       <div className="space-y-4">
         {/* URL Input */}
