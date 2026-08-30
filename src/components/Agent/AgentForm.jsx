@@ -8,7 +8,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   const { client } = useAuthStore();
   const { activeClientId } = useAppStore();
   
-  const clientId = activeClientId || client?._id;
+  const clientId = activeClientId || client?.id;
   
   console.log('🔍 [AgentForm] clientId:', clientId);
   
