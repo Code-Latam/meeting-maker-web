@@ -164,14 +164,13 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     showToast('✅ Website data saved!', 'success');
   };
 
-  // Generate Persona
+  // ✅ Generate Persona - Cleaned with empty fields
   const handleGeneratePersona = async () => {
     if (!formData.role) {
       showToast('Please select a role first', 'error');
       return;
     }
 
-    // Check if we have website data
     if (!websiteData) {
       showToast('Please fetch website information first', 'info');
       setIsWebsiteModalOpen(true);
@@ -181,6 +180,30 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     setIsGeneratingPersona(true);
     try {
       const token = localStorage.getItem('jwt');
+      
+      // ✅ Build clean data with ALL fields - empty if not applicable
+      const cleanWebsiteData = {
+        // User content (always use what's in the textareas)
+        aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
+        businessServices: websiteData.data?.businessServices || websiteData.services || '',
+        
+        // ✅ Force empty metadata to prevent stale data
+        title: '',
+        content: '',
+        url: '',
+        normalizedUrl: '',
+        status: 'manual',
+        _id: null,
+        lastFetchedAt: null,
+      };
+
+      // If there's no AI description, try to use content as fallback
+      if (!cleanWebsiteData.aiDescription && websiteData.data?.content) {
+        cleanWebsiteData.aiDescription = websiteData.data.content;
+      }
+
+      console.log('📤 Sending clean data for persona generation:', cleanWebsiteData);
+
       const response = await fetch('https://api.meetingmaker.tech/agents/generate-persona', {
         method: 'POST',
         headers: {
@@ -189,7 +212,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         },
         body: JSON.stringify({
           role: formData.role,
-          websiteData: websiteData.data || websiteData
+          websiteData: cleanWebsiteData
         })
       });
 
@@ -213,9 +236,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     }
   };
 
-  // Generate Services - Now creates ONE service entry
+  // ✅ Generate Services - Cleaned with empty fields
   const handleGenerateServices = async () => {
-    // Check if we have website data
     if (!websiteData) {
       showToast('Please fetch website information first', 'info');
       setIsWebsiteModalOpen(true);
@@ -225,6 +247,28 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     setIsGeneratingServices(true);
     try {
       const token = localStorage.getItem('jwt');
+      
+      // ✅ Build clean data with ALL fields - empty if not applicable
+      const cleanWebsiteData = {
+        aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
+        businessServices: websiteData.data?.businessServices || websiteData.services || '',
+        
+        // ✅ Force empty metadata
+        title: '',
+        content: '',
+        url: '',
+        normalizedUrl: '',
+        status: 'manual',
+        _id: null,
+        lastFetchedAt: null,
+      };
+
+      if (!cleanWebsiteData.aiDescription && websiteData.data?.content) {
+        cleanWebsiteData.aiDescription = websiteData.data.content;
+      }
+
+      console.log('📤 Sending clean data for services generation:', cleanWebsiteData);
+
       const response = await fetch('https://api.meetingmaker.tech/agents/generate-services', {
         method: 'POST',
         headers: {
@@ -232,7 +276,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          websiteData: websiteData.data || websiteData
+          websiteData: cleanWebsiteData
         })
       });
 
@@ -243,9 +287,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       }
 
       if (data.success && data.services) {
-        // Clear existing services and add ONE service entry
         const servicesText = data.services;
-        // Store as a single service entry
         setStringField('services', servicesText);
         showToast('✅ Services generated successfully!', 'success');
       } else {
