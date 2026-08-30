@@ -10,7 +10,7 @@ export function AgentList({ onEditAgent }) {
   const { client } = useAuthStore();
   const { activeClientId } = useAppStore();
   
-  const clientId = activeClientId || client?._id;
+  const clientId = activeClientId || client?.id;
   
   const [selectedId, setSelectedId] = useState(null);
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
