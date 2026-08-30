@@ -367,11 +367,11 @@ export function AgentForm({ agent, onClose, onSuccess }) {
               onClick={handleOpenWebsiteModal}
               className="text-sm text-primary-600 hover:text-primary-700 transition-colors"
             >
-              🌐 Fetch Website Info
+              🌐 Create Company/activity info first
             </button>
             {websiteData && (
               <span className="text-xs text-green-600">
-                ✅ Website data saved
+                ✅ Company info saved
               </span>
             )}
           </div>
