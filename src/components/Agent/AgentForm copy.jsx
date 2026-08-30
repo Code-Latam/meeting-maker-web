@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAgentStore } from '../../store/agentStore';
-import { useUIStore, useAuthStore, useAppStore } from '../../store';
+import { useUIStore } from '../../store';
 
 export function AgentForm({ agent, onClose, onSuccess }) {
   const { createAgent, updateAgent, categories, fetchCategories } = useAgentStore();
   const { showToast } = useUIStore();
-  const { client } = useAuthStore();
-  const { activeClientId } = useAppStore();
-  
-  // ✅ Use activeClientId if set (agency), fallback to client._id
-  const clientId = activeClientId || client?._id;
-  
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [isGeneratingServices, setIsGeneratingServices] = useState(false);
@@ -147,28 +141,26 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     }));
   };
 
-  // ✅ Generate Persona - Uses client-specific website data from localStorage
+  // ✅ Generate Persona - Uses global website data from localStorage
   const handleGeneratePersona = async () => {
     if (!formData.role) {
       showToast('Please select a role first', 'error');
       return;
     }
 
-    // ✅ Get website data from localStorage using client ID
+    // ✅ Get website data from localStorage
+    const savedWebsiteData = localStorage.getItem('agentWebsiteData');
     let websiteData = null;
-    if (clientId) {
-      const savedWebsiteData = localStorage.getItem(`agentWebsiteData_${clientId}`);
-      if (savedWebsiteData) {
-        try {
-          websiteData = JSON.parse(savedWebsiteData);
-        } catch (e) {
-          console.error('Error loading website data:', e);
-        }
+    if (savedWebsiteData) {
+      try {
+        websiteData = JSON.parse(savedWebsiteData);
+      } catch (e) {
+        console.error('Error loading website data:', e);
       }
     }
 
     if (!websiteData) {
-      showToast('Please add company information first using the "Add Company Info" button on the main page', 'info');
+      showToast('Please add company information first', 'info');
       return;
     }
 
@@ -176,6 +168,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     try {
       const token = localStorage.getItem('jwt');
       
+      // ✅ Build clean data with ALL fields - empty if not applicable
       const cleanWebsiteData = {
         aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
         businessServices: websiteData.data?.businessServices || websiteData.services || '',
@@ -224,23 +217,21 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     }
   };
 
-  // ✅ Generate Services - Uses client-specific website data from localStorage
+  // ✅ Generate Services - Uses global website data from localStorage
   const handleGenerateServices = async () => {
-    // ✅ Get website data from localStorage using client ID
+    // ✅ Get website data from localStorage
+    const savedWebsiteData = localStorage.getItem('agentWebsiteData');
     let websiteData = null;
-    if (clientId) {
-      const savedWebsiteData = localStorage.getItem(`agentWebsiteData_${clientId}`);
-      if (savedWebsiteData) {
-        try {
-          websiteData = JSON.parse(savedWebsiteData);
-        } catch (e) {
-          console.error('Error loading website data:', e);
-        }
+    if (savedWebsiteData) {
+      try {
+        websiteData = JSON.parse(savedWebsiteData);
+      } catch (e) {
+        console.error('Error loading website data:', e);
       }
     }
 
     if (!websiteData) {
-      showToast('Please add company information first using the "Add Company Info" button on the main page', 'info');
+      showToast('Please add company information first', 'info');
       return;
     }
 
