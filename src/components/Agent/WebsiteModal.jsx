@@ -13,7 +13,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   const [error, setError] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
   
-  // ✅ NEW: Manual entry fields
+  // ✅ Fields that serve both fetched and manual entry
   const [companyDescription, setCompanyDescription] = useState('');
   const [services, setServices] = useState('');
 
@@ -35,25 +35,12 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     }
   }, [isOpen, existingData]);
 
-  // When website data is fetched, populate the manual fields
-  useEffect(() => {
-    if (websiteData) {
-      if (websiteData.data?.aiDescription) {
-        setCompanyDescription(websiteData.data.aiDescription);
-      }
-      if (websiteData.data?.businessServices) {
-        setServices(websiteData.data.businessServices);
-      }
-    }
-  }, [websiteData]);
-
   const handleFetchWebsite = async () => {
     if (!url.trim()) {
       showToast('Please enter a website URL', 'error');
       return;
     }
 
-    // Validate URL
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       showToast('Please enter a valid URL (include http:// or https://)', 'error');
       return;
@@ -86,7 +73,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
         savedAt: new Date().toISOString()
       });
       
-      // ✅ Populate manual fields from fetched data
+      // ✅ Populate the same fields with fetched data
       if (website.aiDescription) {
         setCompanyDescription(website.aiDescription);
       }
@@ -108,24 +95,23 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleSave = () => {
-    // ✅ Build data from both fetched and manual inputs
+    // ✅ Build data from the same fields
     const dataToSave = {
       data: {
         ...(websiteData?.data || {}),
-        aiDescription: companyDescription || websiteData?.data?.aiDescription || '',
-        businessServices: services || websiteData?.data?.businessServices || '',
-        title: websiteData?.data?.title || '',
+        aiDescription: companyDescription,
+        businessServices: services,
+        title: websiteData?.data?.title || 'Manual Entry',
         status: websiteData?.data?.status || 'manual',
       },
       url: url.trim() || 'manual-entry',
       savedAt: new Date().toISOString(),
-      // ✅ Include manual entry flag
       isManual: !websiteData?.data?._id,
     };
 
-    // Validate that at least one field has content
-    if (!companyDescription.trim() && !services.trim() && !websiteData?.data?._id) {
-      showToast('Please enter a company description or services, or fetch from a website', 'error');
+    // Validate at least one field has content
+    if (!companyDescription.trim() && !services.trim()) {
+      showToast('Please enter a company description or services', 'error');
       return;
     }
 
@@ -166,15 +152,15 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     <Modal 
       isOpen={isOpen} 
       onClose={handleClose} 
-      title="🌐 Website Information" 
+      title="🌐 Company Information" 
       maxWidth="lg"
       closeOnOutsideClick={false}
     >
       <div className="space-y-4">
-        {/* URL Input */}
+        {/* URL Input - Optional */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Website URL
+            Website URL <span className="text-gray-400 text-xs">(optional)</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -199,11 +185,11 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Enter a URL to fetch business information, or manually enter your details below
+            Optional: Enter a URL to fetch business information, or type/paste your details below
           </p>
         </div>
 
-        {/* Refresh Button */}
+        {/* Refresh Button - only show if data was fetched */}
         {websiteData && (
           <div className="flex justify-end">
             <button
@@ -219,7 +205,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-8">
+          <div className="text-center py-4">
             <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-primary-600 rounded-full"></div>
             <p className="text-gray-500 mt-2 text-sm">Fetching website information...</p>
           </div>
@@ -227,17 +213,17 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <p className="text-sm text-red-700">
               <strong>Error:</strong> {error}
             </p>
           </div>
         )}
 
-        {/* ✅ Company Description - Manual Entry */}
+        {/* ✅ Company Description - Same field for fetched or manual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Company Description <span className="text-gray-400 text-xs">(optional if fetching from website)</span>
+            Company Description <span className="text-gray-400 text-xs">(required)</span>
           </label>
           <textarea
             value={companyDescription}
@@ -247,14 +233,14 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Describe your business or paste your existing description. This will be used for persona and service generation.
+            Describe your business. This will be used for persona and service generation. You can type, paste, or fetch from a website above.
           </p>
         </div>
 
-        {/* ✅ Services/Products - Manual Entry */}
+        {/* ✅ Services/Products - Same field for fetched or manual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Services / Products <span className="text-gray-400 text-xs">(optional if fetching from website)</span>
+            Services / Products <span className="text-gray-400 text-xs">(optional)</span>
           </label>
           <textarea
             value={services}
@@ -264,72 +250,28 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
           />
           <p className="text-xs text-gray-500 mt-1">
-            List your products/services or paste your existing list. This will be used for persona and service generation.
+            List your products/services. You can type, paste, or fetch from a website above.
           </p>
         </div>
 
-        {/* Fetched Data Display */}
-        {websiteData && !loading && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h4 className="font-semibold text-gray-800">
-                  {websiteData.data?.title || 'No title available'}
-                </h4>
-                {websiteData.data?.status && (
-                  <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${getStatusBadge(websiteData.data.status).class}`}>
-                    {getStatusBadge(websiteData.data.status).label}
-                  </span>
-                )}
-              </div>
+        {/* Fetched Data Summary (collapsed) */}
+        {websiteData && !loading && websiteData.data?.title && (
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">
+                {websiteData.data.title}
+              </span>
+              {websiteData.data?.status && (
+                <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(websiteData.data.status).class}`}>
+                  {getStatusBadge(websiteData.data.status).label}
+                </span>
+              )}
             </div>
-
-            {websiteData.data?.aiDescription && (
-              <div className="mb-3">
-                <p className="text-xs font-medium text-gray-500 mb-1">Fetched Description:</p>
-                <div className="bg-white p-2 rounded border border-gray-200 max-h-24 overflow-y-auto">
-                  <p className="text-xs text-gray-600">{websiteData.data.aiDescription}</p>
-                </div>
-              </div>
-            )}
-
-            {websiteData.data?.businessServices && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">Fetched Services:</p>
-                <div className="bg-white p-2 rounded border border-gray-200 max-h-24 overflow-y-auto">
-                  <p className="text-xs text-gray-600 whitespace-pre-wrap">{websiteData.data.businessServices}</p>
-                </div>
-              </div>
-            )}
-
             {websiteData.data?.lastFetchedAt && (
-              <div className="mt-3 text-xs text-gray-400">
-                Last updated: {new Date(websiteData.data.lastFetchedAt).toLocaleString()}
+              <div className="text-xs text-gray-400 mt-1">
+                Fetched: {new Date(websiteData.data.lastFetchedAt).toLocaleString()}
               </div>
             )}
-
-            {websiteData.data?.error && (
-              <div className="mt-2 text-xs text-red-600">
-                Error: {websiteData.data.error}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* No Data State */}
-        {!websiteData && !loading && !error && !companyDescription && !services && (
-          <div className="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <div className="text-4xl mb-2">🌐</div>
-            <p className="text-gray-500 text-sm">Enter a URL and click "Fetch Website" or manually type your business information above</p>
-          </div>
-        )}
-
-        {/* Manual Entry Indicator */}
-        {!websiteData && (companyDescription || services) && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
-              ✏️ Manual entry mode - Your description and services will be saved without a website URL
-            </p>
           </div>
         )}
 
@@ -353,8 +295,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
         </div>
 
         <p className="text-xs text-gray-400 text-center">
-          The website data will be stored for later use in persona and services generation.
-          {!websiteData && (companyDescription || services) && ' Your manual entries will be saved instead.'}
+          Your company description and services will be used for persona and services generation.
         </p>
       </div>
     </Modal>
