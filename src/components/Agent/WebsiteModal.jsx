@@ -13,7 +13,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   const [error, setError] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
   
-  // ✅ Fields that serve both fetched and manual entry
+  // Main fields - used for both fetched and manual entry
   const [companyDescription, setCompanyDescription] = useState('');
   const [services, setServices] = useState('');
 
@@ -25,6 +25,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
         setUrl(existingData.url || '');
         setCompanyDescription(existingData.data?.aiDescription || existingData.description || '');
         setServices(existingData.data?.businessServices || existingData.services || '');
+        setError(null);
       } else {
         setUrl('');
         setWebsiteData(null);
@@ -49,7 +50,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     setIsFetching(true);
     setLoading(true);
     setError(null);
-    setWebsiteData(null);
 
     try {
       const response = await api.post('/api/websites', {
@@ -67,19 +67,17 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       }
 
       const website = data.data;
+      
+      // ✅ Store the fetched data
       setWebsiteData({
         data: website,
         url: url.trim(),
         savedAt: new Date().toISOString()
       });
       
-      // ✅ Populate the same fields with fetched data
-      if (website.aiDescription) {
-        setCompanyDescription(website.aiDescription);
-      }
-      if (website.businessServices) {
-        setServices(website.businessServices);
-      }
+      // ✅ Populate the editable fields with fetched data
+      setCompanyDescription(website.aiDescription || '');
+      setServices(website.businessServices || '');
       
       showToast('✅ Website information fetched successfully!', 'success');
 
@@ -95,18 +93,16 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleSave = () => {
-    // ✅ Build data from the same fields
+    // ✅ Build clean data - keep field names backend expects
     const dataToSave = {
-      data: {
-        ...(websiteData?.data || {}),
-        aiDescription: companyDescription,
-        businessServices: services,
-        title: websiteData?.data?.title || 'Manual Entry',
-        status: websiteData?.data?.status || 'manual',
-      },
-      url: url.trim() || 'manual-entry',
-      savedAt: new Date().toISOString(),
-      isManual: !websiteData?.data?._id,
+      aiDescription: companyDescription,
+      businessServices: services,
+      title: websiteData?.data?.title || '',
+      url: websiteData?.data?.url || url.trim() || '',
+      normalizedUrl: websiteData?.data?.normalizedUrl || '',
+      status: websiteData?.data?.status || 'manual',
+      _id: websiteData?.data?._id || null,
+      lastFetchedAt: websiteData?.data?.lastFetchedAt || null,
     };
 
     // Validate at least one field has content
@@ -115,12 +111,18 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       return;
     }
 
-    onSave(dataToSave);
+    onSave({
+      data: dataToSave,
+      url: url.trim() || 'manual-entry',
+      savedAt: new Date().toISOString(),
+      isManual: !websiteData?.data?._id,
+    });
     onClose();
   };
 
   const handleRefresh = () => {
     if (url.trim()) {
+      setWebsiteData(null);
       handleFetchWebsite();
     } else {
       showToast('Please enter a URL first', 'error');
@@ -133,6 +135,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     setLoading(false);
     setCompanyDescription('');
     setServices('');
+    setUrl('');
     onClose();
   };
 
@@ -147,6 +150,11 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     const s = statusMap[status] || { label: status || 'Unknown', class: 'bg-gray-100 text-gray-700' };
     return s;
   };
+
+  // ✅ Check if user has customized the content
+  const isCustomized = websiteData?.data?._id && 
+    (companyDescription !== websiteData.data.aiDescription || 
+     services !== websiteData.data.businessServices);
 
   return (
     <Modal 
@@ -189,8 +197,8 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* Refresh Button - only show if data was fetched */}
-        {websiteData && (
+        {/* Refresh Button */}
+        {websiteData && websiteData.data?._id && (
           <div className="flex justify-end">
             <button
               type="button"
@@ -254,17 +262,23 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* Fetched Data Summary (collapsed) */}
-        {websiteData && !loading && websiteData.data?.title && (
+        {/* ✅ Fetched Data Summary */}
+        {websiteData && websiteData.data?._id && websiteData.data?.title && (
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">
-                {websiteData.data.title}
+                📄 {websiteData.data.title}
               </span>
-              {websiteData.data?.status && (
-                <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(websiteData.data.status).class}`}>
-                  {getStatusBadge(websiteData.data.status).label}
+              {isCustomized ? (
+                <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700">
+                  ✏️ Customized
                 </span>
+              ) : (
+                websiteData.data?.status && (
+                  <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(websiteData.data.status).class}`}>
+                    {getStatusBadge(websiteData.data.status).label}
+                  </span>
+                )
               )}
             </div>
             {websiteData.data?.lastFetchedAt && (
@@ -272,6 +286,25 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
                 Fetched: {new Date(websiteData.data.lastFetchedAt).toLocaleString()}
               </div>
             )}
+            {websiteData.url && (
+              <div className="text-xs text-gray-400 mt-1">
+                URL: {websiteData.url}
+              </div>
+            )}
+            {isCustomized && (
+              <div className="text-xs text-amber-600 mt-2 border-t border-gray-200 pt-2">
+                ⚠️ The description and services have been customized and may differ from the website.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manual Entry Indicator */}
+        {!websiteData?.data?._id && (companyDescription || services) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-700">
+              ✏️ Manual entry mode - Your description and services will be saved without a website URL
+            </p>
           </div>
         )}
 
