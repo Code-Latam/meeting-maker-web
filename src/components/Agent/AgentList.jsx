@@ -10,44 +10,87 @@ export function AgentList({ onEditAgent }) {
   const { client } = useAuthStore();
   const { activeClientId } = useAppStore();
   
-  // ✅ Use activeClientId if set (agency), fallback to client._id
   const clientId = activeClientId || client?._id;
   
   const [selectedId, setSelectedId] = useState(null);
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
   const [websiteData, setWebsiteData] = useState(null);
 
-  // ✅ Load website data from localStorage using client ID
-  useEffect(() => {
-    if (clientId) {
-      const savedWebsiteData = localStorage.getItem(`agentWebsiteData_${clientId}`);
-      if (savedWebsiteData) {
-        try {
-          const parsed = JSON.parse(savedWebsiteData);
-          setWebsiteData(parsed);
-        } catch (e) {
-          console.error('Error loading website data:', e);
-        }
-      } else {
+  console.log('🔍 [AgentList] Rendering with clientId:', clientId);
+
+  // Load website data from localStorage
+  const loadWebsiteData = () => {
+    console.log('🔄 [AgentList] loadWebsiteData called');
+    
+    if (!clientId) {
+      console.log('❌ [AgentList] No clientId available, setting websiteData to null');
+      setWebsiteData(null);
+      return;
+    }
+    
+    const key = `agentWebsiteData_${clientId}`;
+    console.log(`🔑 [AgentList] Looking for key: "${key}"`);
+    
+    const savedWebsiteData = localStorage.getItem(key);
+    console.log(`📦 [AgentList] Raw data from localStorage:`, savedWebsiteData);
+    
+    if (savedWebsiteData) {
+      try {
+        const parsed = JSON.parse(savedWebsiteData);
+        console.log('✅ [AgentList] Parsed data:', parsed);
+        console.log('📊 [AgentList] Data structure:', {
+          hasData: !!parsed,
+          hasDataDotData: !!parsed?.data,
+          aiDescription: parsed?.data?.aiDescription?.substring(0, 50) + '...' || 'null',
+          businessServices: parsed?.data?.businessServices?.substring(0, 50) + '...' || 'null',
+        });
+        setWebsiteData(parsed);
+      } catch (e) {
+        console.error('❌ [AgentList] Error loading website data:', e);
         setWebsiteData(null);
       }
+    } else {
+      console.log('❌ [AgentList] No data found for key:', key);
+      setWebsiteData(null);
     }
+  };
+
+  // Load data on mount and when client changes
+  useEffect(() => {
+    console.log('🔄 [AgentList] useEffect triggered - clientId changed or mount');
+    loadWebsiteData();
   }, [clientId]);
 
-  // ✅ Save website data with client ID
+  // Reload when modal closes
+  useEffect(() => {
+    console.log('🔄 [AgentList] Modal state changed - isOpen:', isWebsiteModalOpen);
+    if (!isWebsiteModalOpen) {
+      loadWebsiteData();
+    }
+  }, [isWebsiteModalOpen]);
+
+  // Save website data with client ID
   const handleWebsiteDataSaved = (data) => {
+    console.log('💾 [AgentList] handleWebsiteDataSaved called with data:', data);
     if (clientId) {
+      const key = `agentWebsiteData_${clientId}`;
+      console.log(`💾 [AgentList] Saving to key: "${key}"`);
+      localStorage.setItem(key, JSON.stringify(data));
+      console.log('✅ [AgentList] Data saved to localStorage');
       setWebsiteData(data);
-      localStorage.setItem(`agentWebsiteData_${clientId}`, JSON.stringify(data));
       showToast('✅ Company information saved!', 'success');
+    } else {
+      console.log('❌ [AgentList] No clientId available, cannot save');
     }
   };
 
   const handleOpenWebsiteModal = () => {
+    console.log('🔄 [AgentList] Opening WebsiteModal');
     setIsWebsiteModalOpen(true);
   };
 
   useEffect(() => {
+    console.log('🔄 [AgentList] Fetching agents...');
     fetchAgents();
   }, []);
 
@@ -62,8 +105,12 @@ export function AgentList({ onEditAgent }) {
     }
   };
 
+  // Check if website data exists for this client
   const hasCompanyInfo = websiteData && 
     (websiteData.data?.aiDescription || websiteData.description || websiteData.data?.businessServices || websiteData.services);
+
+  console.log('🏢 [AgentList] hasCompanyInfo:', hasCompanyInfo);
+  console.log('📊 [AgentList] websiteData:', websiteData);
 
   if (isLoading && agents.length === 0) {
     return (
@@ -152,7 +199,9 @@ export function AgentList({ onEditAgent }) {
               onClick={() => {
                 if (window.confirm('Are you sure you want to clear the company information for this client?')) {
                   if (clientId) {
-                    localStorage.removeItem(`agentWebsiteData_${clientId}`);
+                    const key = `agentWebsiteData_${clientId}`;
+                    console.log(`🗑️ [AgentList] Clearing data for key: "${key}"`);
+                    localStorage.removeItem(key);
                     setWebsiteData(null);
                     showToast('✅ Company information cleared', 'success');
                   }

@@ -17,16 +17,22 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   const [companyDescription, setCompanyDescription] = useState('');
   const [services, setServices] = useState('');
 
+  console.log('🔍 [WebsiteModal] Rendering, isOpen:', isOpen);
+  console.log('📦 [WebsiteModal] existingData:', existingData);
+
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
+      console.log('🔄 [WebsiteModal] Modal opened');
       if (existingData) {
+        console.log('📦 [WebsiteModal] Loading existing data:', existingData);
         setWebsiteData(existingData);
         setUrl(existingData.url || '');
         setCompanyDescription(existingData.data?.aiDescription || existingData.description || '');
         setServices(existingData.data?.businessServices || existingData.services || '');
         setError(null);
       } else {
+        console.log('🆕 [WebsiteModal] Starting fresh (no existing data)');
         setUrl('');
         setWebsiteData(null);
         setError(null);
@@ -37,6 +43,8 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   }, [isOpen, existingData]);
 
   const handleFetchWebsite = async () => {
+    console.log('🔄 [WebsiteModal] handleFetchWebsite called, URL:', url);
+    
     if (!url.trim()) {
       showToast('Please enter a website URL', 'error');
       return;
@@ -52,6 +60,8 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     setError(null);
 
     try {
+      console.log('📤 [WebsiteModal] Fetching website:', url);
+      
       const response = await api.post('/api/websites', {
         url: url.trim(),
         forceRefresh: true,
@@ -68,21 +78,23 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
 
       const website = data.data;
       
-      // ✅ Store the fetched data
+      console.log('✅ [WebsiteModal] Website fetched successfully:', website);
+      
+      // Store the fetched data
       setWebsiteData({
         data: website,
         url: url.trim(),
         savedAt: new Date().toISOString()
       });
       
-      // ✅ Populate the editable fields with fetched data
+      // Populate the editable fields with fetched data
       setCompanyDescription(website.aiDescription || '');
       setServices(website.businessServices || '');
       
       showToast('✅ Website information fetched successfully!', 'success');
 
     } catch (err) {
-      console.error('Error fetching website:', err);
+      console.error('❌ [WebsiteModal] Error fetching website:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch website information';
       setError(errorMessage);
       showToast(errorMessage, 'error');
@@ -93,7 +105,11 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleSave = () => {
-    // ✅ Build clean data - keep field names backend expects
+    console.log('🔄 [WebsiteModal] handleSave called');
+    console.log('📝 Company Description:', companyDescription);
+    console.log('📝 Services:', services);
+    
+    // Build clean data - keep field names backend expects
     const dataToSave = {
       aiDescription: companyDescription,
       businessServices: services,
@@ -105,22 +121,31 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       lastFetchedAt: websiteData?.data?.lastFetchedAt || null,
     };
 
+    console.log('📤 [WebsiteModal] Data to save:', dataToSave);
+
     // Validate at least one field has content
     if (!companyDescription.trim() && !services.trim()) {
       showToast('Please enter a company description or services', 'error');
       return;
     }
 
-    onSave({
+    const fullData = {
       data: dataToSave,
       url: url.trim() || 'manual-entry',
       savedAt: new Date().toISOString(),
       isManual: !websiteData?.data?._id,
-    });
+    };
+
+    console.log('📤 [WebsiteModal] Full data object:', fullData);
+    console.log('📤 [WebsiteModal] Calling onSave...');
+    
+    onSave(fullData);
+    console.log('✅ [WebsiteModal] onSave called, closing modal');
     onClose();
   };
 
   const handleRefresh = () => {
+    console.log('🔄 [WebsiteModal] handleRefresh called');
     if (url.trim()) {
       setWebsiteData(null);
       handleFetchWebsite();
@@ -130,6 +155,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleClose = () => {
+    console.log('🔄 [WebsiteModal] handleClose called');
     setWebsiteData(null);
     setError(null);
     setLoading(false);
@@ -151,7 +177,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     return s;
   };
 
-  // ✅ Check if user has customized the content
+  // Check if user has customized the content
   const isCustomized = websiteData?.data?._id && 
     (companyDescription !== websiteData.data.aiDescription || 
      services !== websiteData.data.businessServices);
@@ -228,7 +254,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {/* ✅ Company Description - Same field for fetched or manual */}
+        {/* Company Description - Same field for fetched or manual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Company Description <span className="text-gray-400 text-xs">(required)</span>
@@ -245,7 +271,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* ✅ Services/Products - Same field for fetched or manual */}
+        {/* Services/Products - Same field for fetched or manual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Services / Products <span className="text-gray-400 text-xs">(optional)</span>
@@ -262,7 +288,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* ✅ Fetched Data Summary */}
+        {/* Fetched Data Summary */}
         {websiteData && websiteData.data?._id && websiteData.data?.title && (
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
             <div className="flex items-center justify-between">

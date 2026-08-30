@@ -8,8 +8,9 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   const { client } = useAuthStore();
   const { activeClientId } = useAppStore();
   
-  // ✅ Use activeClientId if set (agency), fallback to client._id
   const clientId = activeClientId || client?._id;
+  
+  console.log('🔍 [AgentForm] clientId:', clientId);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
@@ -147,30 +148,39 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     }));
   };
 
-  // ✅ Generate Persona - Uses client-specific website data from localStorage
+  // Generate Persona - Uses client-specific website data from localStorage
   const handleGeneratePersona = async () => {
+    console.log('🔄 [AgentForm] handleGeneratePersona called');
+    
     if (!formData.role) {
       showToast('Please select a role first', 'error');
       return;
     }
 
-    // ✅ Get website data from localStorage using client ID
+    // Get website data from localStorage using client ID
     let websiteData = null;
     if (clientId) {
-      const savedWebsiteData = localStorage.getItem(`agentWebsiteData_${clientId}`);
+      const key = `agentWebsiteData_${clientId}`;
+      console.log(`🔑 [AgentForm] Looking for key: "${key}"`);
+      const savedWebsiteData = localStorage.getItem(key);
+      console.log(`📦 [AgentForm] Raw data from localStorage:`, savedWebsiteData);
       if (savedWebsiteData) {
         try {
           websiteData = JSON.parse(savedWebsiteData);
+          console.log('✅ [AgentForm] Parsed website data:', websiteData);
         } catch (e) {
-          console.error('Error loading website data:', e);
+          console.error('❌ [AgentForm] Error loading website data:', e);
         }
       }
     }
 
     if (!websiteData) {
+      console.log('❌ [AgentForm] No website data found');
       showToast('Please add company information first using the "Add Company Info" button on the main page', 'info');
       return;
     }
+
+    console.log('✅ [AgentForm] Website data found, generating persona...');
 
     setIsGeneratingPersona(true);
     try {
@@ -191,6 +201,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       if (!cleanWebsiteData.aiDescription && websiteData.data?.content) {
         cleanWebsiteData.aiDescription = websiteData.data.content;
       }
+
+      console.log('📤 [AgentForm] Sending clean data:', cleanWebsiteData);
 
       const response = await fetch('https://api.meetingmaker.tech/agents/generate-persona', {
         method: 'POST',
@@ -217,32 +229,41 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         throw new Error(data.message || 'Failed to generate persona');
       }
     } catch (err) {
-      console.error('Error generating persona:', err);
+      console.error('❌ [AgentForm] Error generating persona:', err);
       showToast(err.message || 'Failed to generate persona', 'error');
     } finally {
       setIsGeneratingPersona(false);
     }
   };
 
-  // ✅ Generate Services - Uses client-specific website data from localStorage
+  // Generate Services - Uses client-specific website data from localStorage
   const handleGenerateServices = async () => {
-    // ✅ Get website data from localStorage using client ID
+    console.log('🔄 [AgentForm] handleGenerateServices called');
+    
+    // Get website data from localStorage using client ID
     let websiteData = null;
     if (clientId) {
-      const savedWebsiteData = localStorage.getItem(`agentWebsiteData_${clientId}`);
+      const key = `agentWebsiteData_${clientId}`;
+      console.log(`🔑 [AgentForm] Looking for key: "${key}"`);
+      const savedWebsiteData = localStorage.getItem(key);
+      console.log(`📦 [AgentForm] Raw data from localStorage:`, savedWebsiteData);
       if (savedWebsiteData) {
         try {
           websiteData = JSON.parse(savedWebsiteData);
+          console.log('✅ [AgentForm] Parsed website data:', websiteData);
         } catch (e) {
-          console.error('Error loading website data:', e);
+          console.error('❌ [AgentForm] Error loading website data:', e);
         }
       }
     }
 
     if (!websiteData) {
+      console.log('❌ [AgentForm] No website data found');
       showToast('Please add company information first using the "Add Company Info" button on the main page', 'info');
       return;
     }
+
+    console.log('✅ [AgentForm] Website data found, generating services...');
 
     setIsGeneratingServices(true);
     try {
@@ -263,6 +284,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       if (!cleanWebsiteData.aiDescription && websiteData.data?.content) {
         cleanWebsiteData.aiDescription = websiteData.data.content;
       }
+
+      console.log('📤 [AgentForm] Sending clean data for services:', cleanWebsiteData);
 
       const response = await fetch('https://api.meetingmaker.tech/agents/generate-services', {
         method: 'POST',
@@ -289,7 +312,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         throw new Error(data.message || 'Failed to generate services');
       }
     } catch (err) {
-      console.error('Error generating services:', err);
+      console.error('❌ [AgentForm] Error generating services:', err);
       showToast(err.message || 'Failed to generate services', 'error');
     } finally {
       setIsGeneratingServices(false);
@@ -298,6 +321,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+      {/* ... rest of the form (same as before) ... */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Agent Name *
