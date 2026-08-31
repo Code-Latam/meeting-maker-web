@@ -79,22 +79,33 @@ export function DashboardTab() {
     });
   };
 
-  // ✅ FIXED: Use api service instead of direct fetch
-  const fetchAgents = async () => {
-    try {
-      const response = await api.get('/agents');
-      if (response.data) {
-        const data = response.data;
-        setAgents(data.agents || []);
-        if (data.agents && data.agents.length > 0) {
-          setSelectedAgentId(data.agents[0]._id);
-        }
+ // ✅ FIXED: Filter agents in the frontend
+const fetchAgents = async () => {
+  try {
+    const response = await api.get('/agents');
+    if (response.data) {
+      const data = response.data;
+      
+      // ✅ Exclude Marketing Manager and SEO Manager roles (exact match)
+      const excludedRoles = [
+        "Marketing Manager",
+        "SEO Manager"
+      ];
+      
+      const filteredAgents = (data.agents || []).filter(
+        agent => !excludedRoles.includes(agent.role)
+      );
+      
+      setAgents(filteredAgents);
+      if (filteredAgents.length > 0) {
+        setSelectedAgentId(filteredAgents[0]._id);
       }
-    } catch (error) {
-      console.error('Error fetching agents:', error);
-      showToast('Failed to load agents', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching agents:', error);
+    showToast('Failed to load agents', 'error');
+  }
+};
 
   // ✅ FIXED: Use api service instead of direct fetch
   const fetchMetric = async (metric, agentId, timeframeValue) => {
