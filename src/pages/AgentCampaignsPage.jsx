@@ -188,37 +188,37 @@ const handleSearchSubmit = async (e) => {
   }
   
   // =====================================================
-  // STEP 3: Validate Titles (SINGLE title only!)
-  // =====================================================
-  
-  // 3a: Check if title is empty
-  if (!titlesRaw) {
-    showToast('Please enter a title', 'error');
-    return;
-  }
-  
-  // 3b: Check if user entered multiple titles (comma-separated) - BLOCK!
-  if (titlesRaw && titlesRaw.includes(',')) {
-    const titleCount = titlesRaw.split(',').filter(t => t.trim()).length;
-    showToast(`⚠️ Only ONE title is allowed. You entered ${titleCount} titles. Please enter a single title.`, 'error');
-    return;
-  }
-  
-  // 3c: 🆕 Check if title has spaces - WARNING (user might be trying to enter multiple titles)
-  if (titlesRaw && titlesRaw.includes(' ')) {
-    const wordCount = titlesRaw.split(/\s+/).length;
-    const shouldContinue = window.confirm(
-      `⚠️ "${titlesRaw}" contains ${wordCount} words with spaces.\n\n` +
-      `Only ONE title is allowed.\n` +
-      `If you meant to enter multiple titles, only one title is allowed\n\n` +
-      `"OK" to continue with "${titlesRaw}" as a single title\n` +
-      `"Cancel" to fix manually`
-    );
-    if (!shouldContinue) return;
-  }
-  
-  // 3d: Parse titles (single value)
-  const titles = titlesRaw ? [titlesRaw.trim()] : [];
+// STEP 3: Validate Titles (SINGLE title only!) - NOW OPTIONAL
+// =====================================================
+
+// 3a: Remove this check - title is now optional
+// if (!titlesRaw) {
+//   showToast('Please enter a title', 'error');
+//   return;
+// }
+
+// 3b: Check if user entered multiple titles (comma-separated) - BLOCK!
+if (titlesRaw && titlesRaw.includes(',')) {
+  const titleCount = titlesRaw.split(',').filter(t => t.trim()).length;
+  showToast(`⚠️ Only ONE title is allowed. You entered ${titleCount} titles. Please enter a single title.`, 'error');
+  return;
+}
+
+// 3c: Check if title has spaces - WARNING (user might be trying to enter multiple titles)
+if (titlesRaw && titlesRaw.includes(' ')) {
+  const wordCount = titlesRaw.split(/\s+/).length;
+  const shouldContinue = window.confirm(
+    `⚠️ "${titlesRaw}" contains ${wordCount} words with spaces.\n\n` +
+    `Only ONE title is allowed.\n` +
+    `If you meant to enter multiple titles, only one title is allowed\n\n` +
+    `"OK" to continue with "${titlesRaw}" as a single title\n` +
+    `"Cancel" to fix manually`
+  );
+  if (!shouldContinue) return;
+}
+
+// 3d: Parse titles (single value) - if empty, it remains empty array
+const titles = titlesRaw ? [titlesRaw.trim()] : [];
   
   // =====================================================
   // STEP 4: Campaign name validation
@@ -815,16 +815,16 @@ const renderSearchCampaigns = () => {
           {/* Titles */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title
+              Title <span className="text-gray-400 text-xs">(Optional)</span>
             </label>
             <input
               type="text"
               value={searchFormData.titles}
               onChange={(e) => handleSearchFormChange('titles', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              placeholder="e.g., Sales Director, Head of Growth"
+              placeholder="e.g., Sales Director (optional, max 1)"
             />
-            <p className="text-xs text-gray-500 mt-1">Only one title allowed</p>
+            <p className="text-xs text-gray-500 mt-1">Optional - Only one title allowed if provided</p>
           </div>
 
           {/* Locations */}
