@@ -118,44 +118,38 @@ export function MarketingCampaignsPage() {
   // =====================================================
   
   const handleKeywordSubmit = async (e) => {
-  e.preventDefault();
-  
-  const keywords = keywordForm.keywords.split(',').map(k => k.trim()).filter(Boolean);
-  
-  if (!keywordForm.name) {
-    showToast('Campaign name is required', 'error');
-    return;
-  }
-  if (keywords.length === 0) {
-    showToast('At least one keyword is required', 'error');
-    return;
-  }
-  
-  // ✅ NEW: Limit to max 5 keywords
-  if (keywords.length > 5) {
-    showToast(`Maximum 5 keywords allowed. You entered ${keywords.length}.`, 'error');
-    return;
-  }
-  
-  const data = {
-    name: keywordForm.name,
-    agentId,
-    keywords,
-    maxAgeDays: keywordForm.maxAgeDays,
-    minComments: keywordForm.minComments,
-    dailyLimit: keywordForm.dailyLimit
+    e.preventDefault();
+    
+    const keywords = keywordForm.keywords.split(',').map(k => k.trim()).filter(Boolean);
+    
+    if (!keywordForm.name) {
+      showToast('Campaign name is required', 'error');
+      return;
+    }
+    if (keywords.length === 0) {
+      showToast('At least one keyword is required', 'error');
+      return;
+    }
+    
+    const data = {
+      name: keywordForm.name,
+      agentId,
+      keywords,
+      maxAgeDays: keywordForm.maxAgeDays,
+      minComments: keywordForm.minComments,
+      dailyLimit: keywordForm.dailyLimit
+    };
+    
+    const result = await campaignsService.createKeywordCampaign(data);
+    if (result.success) {
+      showToast('Keyword campaign created successfully', 'success');
+      setIsModalOpen(false);
+      resetKeywordForm();
+      await loadKeywordCampaigns();
+    } else {
+      showToast(result.error || 'Failed to create campaign', 'error');
+    }
   };
-  
-  const result = await campaignsService.createKeywordCampaign(data);
-  if (result.success) {
-    showToast('Keyword campaign created successfully', 'success');
-    setIsModalOpen(false);
-    resetKeywordForm();
-    await loadKeywordCampaigns();
-  } else {
-    showToast(result.error || 'Failed to create campaign', 'error');
-  }
-};
 
   const handleToggleKeyword = async (id, status) => {
     const newStatus = status === 'active' ? 'paused' : 'active';
@@ -526,118 +520,50 @@ const handleSearchInfluencers = async () => {
   // RENDER FUNCTIONS
   // =====================================================
   
- const renderCampaignCard = (campaign, type, actions) => {
-  const statusClass = getStatusClass(campaign.status);
-  const statusText = campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1);
+  const renderCampaignCard = (campaign, type, actions) => {
+    const statusClass = getStatusClass(campaign.status);
+    const statusText = campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1);
 
-  // ✅ Build campaign-specific details
-  let details = [];
-
-  if (type === 'keyword') {
-    details = [
-      { label: '🔑 Keywords', value: campaign.keywords?.join(', ') || 'N/A' },
-      { label: '📅 Max Age', value: `${campaign.maxAgeDays || 7} days` },
-      { label: '💬 Min Comments', value: campaign.minComments || 50 },
-      { label: '📊 Found Posts', value: campaign.stats?.postsFound || 0 },
-      { label: '👍 Engaged', value: campaign.stats?.postsEngaged || 0 }
-    ];
-  }
-
-  if (type === 'influencer') {
-  const influencerCount = campaign.influencers?.length || 0;
-  // Get the first 3 profile URLs for display
-  const firstUrls = campaign.influencers?.slice(0, 3).map(i => i.profileUrl) || [];
-  const urlDisplay = firstUrls.length > 0 
-    ? firstUrls.map(url => url.replace('https://www.linkedin.com/in/', '@') || url).join(', ')
-    : 'None';
-  
-  details = [
-    { label: '👥 Influencers', value: `${influencerCount} followed` },
-    { label: '🔗 Profiles', value: urlDisplay + (influencerCount > 3 ? ` +${influencerCount - 3} more` : '') },
-    { label: '📊 Posts Found', value: campaign.stats?.postsFound || 0 },
-    { label: '👍 Engaged', value: campaign.stats?.postsEngaged || 0 }
-  ];
-}
-
-  if (type === 'commentreply') {
-    details = [
-      { label: '🔗 Your Profile', value: campaign.ownProfileUrl || 'N/A' },
-      { label: '📅 Max Age', value: `${campaign.maxAgeDays || 7} days` },
-      { label: '💬 Comments Found', value: campaign.stats?.commentsFound || 0 },
-      { label: '✍️ Replies Sent', value: campaign.stats?.commentsReplied || 0 }
-    ];
-  }
-
-  if (type === 'marketconnections') {
-    details = [
-      { label: '🔑 Keywords', value: campaign.keywords?.join(', ') || 'N/A' },
-      { label: '📝 Template', value: campaign.messageTemplate ? 
-        (campaign.messageTemplate.length > 80 ? campaign.messageTemplate.substring(0, 80) + '...' : campaign.messageTemplate) 
-        : 'N/A' },
-      { label: '📊 Connections Found', value: campaign.stats?.connectionsFound || 0 },
-      { label: '✉️ Messages Sent', value: campaign.stats?.messagesSent || 0 },
-      { label: '📨 Max Total', value: campaign.maxMessages || 'Unlimited' }
-    ];
-  }
-
-  return (
-    <div key={campaign._id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
-          <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${statusClass}`}>
-            {statusText}
-          </span>
-          <span className="ml-2 text-xs text-gray-400">
-            {type === 'keyword' && '🔍 Keyword Search'}
-            {type === 'influencer' && '👥 Influencer Following'}
-            {type === 'commentreply' && '💬 Comment Reply'}
-            {type === 'marketconnections' && '🔗 Message to Connections'}
-          </span>
-        </div>
-      </div>
-
-      {/* ✅ Campaign Details Grid */}
-      <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm bg-gray-50 rounded-lg p-3 border border-gray-100">
-        {details.map((detail, index) => (
-          <div key={index}>
-            <span className="text-gray-500">{detail.label}:</span>
-            <span className="ml-1 text-gray-700 font-medium">{detail.value}</span>
+    return (
+      <div key={campaign._id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
+            <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${statusClass}`}>
+              {statusText}
+            </span>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* ✅ Stats Row */}
-      <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-        <div>
-          <span className="text-gray-500">Daily Limit:</span>
-          <span className="ml-1 text-gray-700">{campaign.dailyLimit || 50}</span>
+        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+          <div>
+            <span className="text-gray-500">Daily Limit:</span>
+            <span className="ml-1 text-gray-700">{campaign.dailyLimit || 50}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Today:</span>
+            <span className="ml-1 text-gray-700">{campaign.dailyProcessed || 0}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Found:</span>
+            <span className="ml-1 text-gray-700">
+              {campaign.stats?.postsFound || campaign.stats?.commentsFound || campaign.stats?.connectionsFound || 0}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Engaged:</span>
+            <span className="ml-1 text-gray-700">
+              {campaign.stats?.postsEngaged || campaign.stats?.commentsReplied || campaign.stats?.messagesSent || 0}
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="text-gray-500">Today:</span>
-          <span className="ml-1 text-gray-700">{campaign.dailyProcessed || 0}</span>
-        </div>
-        <div>
-          <span className="text-gray-500">Found:</span>
-          <span className="ml-1 text-gray-700">
-            {campaign.stats?.postsFound || campaign.stats?.commentsFound || campaign.stats?.connectionsFound || 0}
-          </span>
-        </div>
-        <div>
-          <span className="text-gray-500">Engaged:</span>
-          <span className="ml-1 text-gray-700">
-            {campaign.stats?.postsEngaged || campaign.stats?.commentsReplied || campaign.stats?.messagesSent || 0}
-          </span>
-        </div>
-      </div>
 
-      {/* ✅ Actions */}
-      <div className="mt-3 flex gap-2 justify-end flex-wrap">
-        {actions}
+        <div className="mt-3 flex gap-2 justify-end flex-wrap">
+          {actions}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   const renderKeywordCampaigns = () => {
     if (keywordCampaigns.length === 0) {
