@@ -28,8 +28,8 @@ export function MarketingCampaignsPage() {
   const [searchingInfluencers, setSearchingInfluencers] = useState(false);
   const [influencerSearchData, setInfluencerSearchData] = useState({
     keywords: '',
-    minReactions: 40,
-    minFollowers: 50000,
+    minReactions: 30,
+    minFollowers: 5000,
     postAge: 'past_month'
   });
   const [selectedInfluencers, setSelectedInfluencers] = useState([]);
@@ -39,7 +39,7 @@ export function MarketingCampaignsPage() {
     name: '',
     keywords: '',
     maxAgeDays: 7,
-    minComments: 50,
+    minComments: 10,
     dailyLimit: 50
   });
 
