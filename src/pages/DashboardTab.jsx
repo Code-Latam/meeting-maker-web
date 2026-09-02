@@ -46,7 +46,7 @@ export function DashboardTab() {
     },
     inConversation: {
       description: 'Number of active ongoing conversations.',
-      advice: '💡 If below target, ramp up outreach. If stuck, focus on closing or moving leads forward.',
+      advice: '💡 If below target for CSR agent increase your marketing campaigns, If below target for BDR agent adapt your outreach campaigns.',
     },
     invToConnRate: {
       description: 'Percentage of invitations that convert to connections.',
@@ -58,7 +58,7 @@ export function DashboardTab() {
     },
     connToConvRate: {
       description: 'Percentage of connections that convert to a meeting or opportunity.',
-      advice: '💡 BDR target: 2%. CRS target: 5% (inbound leads are warmer). Focus on relationship building.',
+      advice: '💡 BDR target: 2%. CRS target: 3% (inbound leads are warmer). Focus on relationship building.',
     },
   };
 
