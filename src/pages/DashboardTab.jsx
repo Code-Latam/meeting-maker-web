@@ -22,10 +22,10 @@ export function DashboardTab() {
       connectionToConversionRate: 2,
     },
     crs: {
-      leadsPerDay: 10,
-      connectionsPerDay: 10,
-      inConversation: 20,
-      connectionToConversionRate: 3,
+      leadsPerDay: 30,
+      connectionsPerDay: 20,
+      inConversation: 50,
+      connectionToConversionRate: 5,
     },
   };
 
@@ -46,7 +46,7 @@ export function DashboardTab() {
     },
     inConversation: {
       description: 'Number of active ongoing conversations.',
-      advice: '💡 If below target for CSR agent increase your marketing campaigns, If below target for BDR agent adapt your outreach campaigns.',
+      advice: '💡 If below target, ramp up outreach. If stuck, focus on closing or moving leads forward.',
     },
     invToConnRate: {
       description: 'Percentage of invitations that convert to connections.',
@@ -58,7 +58,7 @@ export function DashboardTab() {
     },
     connToConvRate: {
       description: 'Percentage of connections that convert to a meeting or opportunity.',
-      advice: '💡 BDR target: 2%. CRS target: 3% (inbound leads are warmer). Focus on relationship building.',
+      advice: '💡 BDR target: 2%. CRS target: 5% (inbound leads are warmer). Focus on relationship building.',
     },
   };
 
@@ -560,20 +560,15 @@ export function DashboardTab() {
     return map[tf] || 30;
   };
 
-  // 🆕 Calculate actual active days from leadsTimeseries
   const getActiveDays = (timeseries, fallbackDays) => {
-    if (!timeseries || timeseries.length < 2) {
-      return fallbackDays; // not enough data to determine range
-    }
+    if (!timeseries || timeseries.length < 2) return fallbackDays;
     try {
       const firstDate = new Date(timeseries[0].date);
       const lastDate = new Date(timeseries[timeseries.length - 1].date);
       const diffTime = Math.abs(lastDate - firstDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // inclusive
-      // Sanity check: diffDays shouldn't exceed fallbackDays
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       return Math.min(diffDays, fallbackDays);
     } catch (e) {
-      console.warn('Failed to compute active days from timeseries, using fallback', e);
       return fallbackDays;
     }
   };
@@ -598,11 +593,21 @@ export function DashboardTab() {
     return `${target} / day`;
   };
 
-  const MetricCard = ({ label, value, suffix = '', isRate = false, isAbsolute = false, target, metricKey }) => {
+  const MetricCard = ({
+    label,
+    value,
+    total,               // optional total value
+    suffix = '',
+    isRate = false,
+    isAbsolute = false,
+    target,
+    metricKey,
+  }) => {
     const displayValue = formatValue(value, isRate, isAbsolute);
     const colorClass = target !== undefined ? getColorClass(value, target) : 'text-gray-800';
     const targetDisplay = target !== undefined ? formatTargetDisplay(target, isRate, isAbsolute) : null;
     const info = metricKey ? METRIC_INFO[metricKey] : null;
+    const totalDisplay = total !== undefined ? `Total: ${Math.round(total).toLocaleString()}` : null;
 
     return (
       <div className="relative group bg-white rounded-xl shadow-sm border border-gray-200 p-4 transition-all hover:shadow-md">
@@ -613,6 +618,9 @@ export function DashboardTab() {
           </div>
           {targetDisplay && (
             <div className="text-xs text-gray-400 mt-0.5">Target: {targetDisplay}</div>
+          )}
+          {totalDisplay && (
+            <div className="text-[10px] text-gray-400 mt-0.5">{totalDisplay}</div>
           )}
         </div>
         {info && (
@@ -723,7 +731,6 @@ export function DashboardTab() {
 
             const targets = isCrs ? TARGETS.crs : TARGETS.bdr;
             const fallbackDays = getDaysFromTimeframe(timeframe);
-            // 🆕 Use actual active days from leadsTimeseries
             const activeDays = getActiveDays(leadsTimeseries, fallbackDays);
             console.log(`📅 Active days: ${activeDays} (fallback: ${fallbackDays})`);
 
@@ -736,6 +743,7 @@ export function DashboardTab() {
             cardConfigs.push({
               label: 'Avg Leads / Day',
               value: avgLeads,
+              total: linkedInMetrics.leads,
               target: targets.leadsPerDay,
               isRate: false,
               isAbsolute: false,
@@ -746,6 +754,7 @@ export function DashboardTab() {
               cardConfigs.push({
                 label: 'Avg Invitations / Day',
                 value: avgInvitations,
+                total: linkedInMetrics.invitations,
                 target: targets.invitationsPerDay,
                 isRate: false,
                 isAbsolute: false,
@@ -758,6 +767,7 @@ export function DashboardTab() {
             cardConfigs.push({
               label: 'Avg Connections / Day',
               value: avgConnections,
+              total: linkedInMetrics.connections,
               target: targets.connectionsPerDay,
               isRate: false,
               isAbsolute: false,
@@ -767,6 +777,7 @@ export function DashboardTab() {
             cardConfigs.push({
               label: 'In Conversation',
               value: linkedInMetrics.inConversation,
+              total: undefined, // no total for active conversations
               target: targets.inConversation,
               isRate: false,
               isAbsolute: true,
@@ -777,6 +788,7 @@ export function DashboardTab() {
               cardConfigs.push({
                 label: 'Invitation → Connection Rate',
                 value: linkedInMetrics.invitationToConnectionRate,
+                total: undefined,
                 target: targets.invitationToConnectionRate,
                 suffix: '%',
                 isRate: true,
@@ -786,6 +798,7 @@ export function DashboardTab() {
               cardConfigs.push({
                 label: 'Invitation → Conversion Rate',
                 value: linkedInMetrics.invitationToConversionRate,
+                total: undefined,
                 target: targets.invitationToConversionRate,
                 suffix: '%',
                 isRate: true,
@@ -797,6 +810,7 @@ export function DashboardTab() {
             cardConfigs.push({
               label: 'Connection → Conversion Rate',
               value: linkedInMetrics.connectionToConversionRate,
+              total: undefined,
               target: targets.connectionToConversionRate,
               suffix: '%',
               isRate: true,
