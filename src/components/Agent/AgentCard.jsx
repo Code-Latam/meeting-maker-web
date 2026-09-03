@@ -1,16 +1,15 @@
-// src/components/AgentCard.jsx
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 
-export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
+export function AgentCard({ agent, onEdit, onDelete, isSelected, linkedinCount = 0, emailCount = 0, articleCount = 0 }) {
   const navigate = useNavigate();
   const { user, client } = useAuthStore();
   
   const isPremium = client?.plan === 'premium';
   const isMarketingManager = agent.role === 'Marketing Manager';
   const isSEO = agent.role === 'SEO Manager';
+  const isCSR = agent.role === 'Custom Service Representative';
 
   const getStatusColor = (isActive) => {
     return isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500';
@@ -30,7 +29,6 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
     }
   };
 
-  // ✅ Handle blog settings navigation
   const handleBlogSettings = (e) => {
     e.stopPropagation();
     navigate('/blog');
@@ -39,6 +37,38 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
   const showCampaignsBtn = isPremium && !isSEO && agent.role !== 'Custom Service Representative';
   const showPersonsBtn = !isSEO;
   const showBlogBtn = isSEO;
+
+  // Render badges (LinkedIn/Email or Article) - hidden for Marketing Manager and CSR
+  const renderBadges = () => {
+    // Exclude Marketing Manager and Custom Service Representative
+    if (isMarketingManager || isCSR) {
+      return null;
+    }
+
+    if (isSEO) {
+      const isLow = articleCount < 5;
+      return (
+        <div className="mt-2 flex gap-1">
+          <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${isLow ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+            {isLow ? `⚠️ Low Articles (${articleCount})` : `✅ ${articleCount} articles published`}
+          </span>
+        </div>
+      );
+    }
+
+    const linkedinLow = linkedinCount < 50;
+    const emailLow = emailCount < 50;
+    return (
+      <div className="mt-2 flex flex-wrap gap-1">
+        <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${linkedinLow ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+          {linkedinLow ? `⚠️ Low LinkedIn (${linkedinCount})` : `✅ LinkedIn: ${linkedinCount}`}
+        </span>
+        <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${emailLow ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+          {emailLow ? `⚠️ Low Email (${emailCount})` : `✅ Email: ${emailCount}`}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -65,6 +95,8 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
         </div>
       </div>
 
+      {renderBadges()}
+
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-gray-500">
           {agent.createdAt && (
@@ -72,7 +104,6 @@ export function AgentCard({ agent, onEdit, onDelete, isSelected }) {
           )}
         </div>
         <div className="flex items-center gap-1">
-          {/* ✅ Blog Settings button - only for SEO Manager */}
           {showBlogBtn && (
             <button
               onClick={handleBlogSettings}

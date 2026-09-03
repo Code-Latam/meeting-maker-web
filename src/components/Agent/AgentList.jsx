@@ -3,6 +3,7 @@ import { useAgentStore } from '../../store/agentStore';
 import { AgentCard } from './AgentCard';
 import { useUIStore, useAuthStore, useAppStore } from '../../store';
 import { WebsiteModal } from './WebsiteModal';
+import { agentsService } from '../../services/agents';
 
 export function AgentList({ onEditAgent }) {
   const { agents, isLoading, error, fetchAgents, deleteAgent } = useAgentStore();
@@ -15,6 +16,10 @@ export function AgentList({ onEditAgent }) {
   const [selectedId, setSelectedId] = useState(null);
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
   const [websiteData, setWebsiteData] = useState(null);
+
+  // NEW: state for counts
+  const [countsMap, setCountsMap] = useState({});
+  const [countsLoading, setCountsLoading] = useState(false);
 
   console.log('🔍 [AgentList] Rendering with clientId:', clientId);
 
@@ -93,6 +98,41 @@ export function AgentList({ onEditAgent }) {
     console.log('🔄 [AgentList] Fetching agents...');
     fetchAgents();
   }, []);
+
+  // NEW: Fetch counts whenever agents change
+  useEffect(() => {
+    if (agents.length === 0) {
+      setCountsMap({});
+      return;
+    }
+
+    const fetchCounts = async () => {
+      setCountsLoading(true);
+      try {
+        const [leadRes, emailRes, articleRes] = await Promise.all([
+          agentsService.getLeadCounts(),
+          agentsService.getEmailLeadCounts(),
+          agentsService.getArticleCounts(),
+        ]);
+
+        const newMap = {};
+        agents.forEach(agent => {
+          const agentId = agent._id;
+          const linkedin = leadRes.success ? (leadRes.counts[agentId] || 0) : 0;
+          const email = emailRes.success ? (emailRes.counts[agentId] || 0) : 0;
+          const articles = articleRes.success ? (articleRes.counts[agentId] || 0) : 0;
+          newMap[agentId] = { linkedin, email, articles };
+        });
+        setCountsMap(newMap);
+      } catch (error) {
+        console.error('Failed to fetch agent counts:', error);
+      } finally {
+        setCountsLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, [agents]);
 
   const handleDelete = async (agent) => {
     if (window.confirm(`Are you sure you want to delete "${agent.name}"?`)) {
@@ -222,18 +262,24 @@ export function AgentList({ onEditAgent }) {
       </div>
 
       <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:grid-cols-3">
-        {agents.map((agent) => (
-          <AgentCard
-            key={agent._id}
-            agent={agent}
-            onEdit={() => {
-              setSelectedId(agent._id);
-              onEditAgent(agent);
-            }}
-            onDelete={handleDelete}
-            isSelected={selectedId === agent._id}
-          />
-        ))}
+        {agents.map((agent) => {
+          const counts = countsMap[agent._id] || { linkedin: 0, email: 0, articles: 0 };
+          return (
+            <AgentCard
+              key={agent._id}
+              agent={agent}
+              onEdit={() => {
+                setSelectedId(agent._id);
+                onEditAgent(agent);
+              }}
+              onDelete={handleDelete}
+              isSelected={selectedId === agent._id}
+              linkedinCount={counts.linkedin}
+              emailCount={counts.email}
+              articleCount={counts.articles}
+            />
+          );
+        })}
       </div>
 
       <WebsiteModal

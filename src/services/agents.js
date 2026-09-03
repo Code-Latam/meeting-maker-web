@@ -110,6 +110,45 @@ export const agentsService = {
     }
   },
 
+  // Get LinkedIn lead counts for all agents
+async getLeadCounts() {
+  try {
+    const response = await api.get('/people/agent-lead-counts');
+    return { success: true, counts: response.data.counts || {} };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch lead counts'
+    };
+  }
+},
+
+// Get email lead counts for all agents
+async getEmailLeadCounts() {
+  try {
+    const response = await api.get('/people/agent-email-lead-counts');
+    return { success: true, counts: response.data.counts || {} };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch email lead counts'
+    };
+  }
+},
+
+// Get article counts (for SEO Manager)
+async getArticleCounts() {
+  try {
+    const response = await api.get('/blog/agents/article-counts');
+    return { success: true, counts: response.data.counts || {} };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch article counts'
+    };
+  }
+},
+
   // Fetch website info
   async fetchWebsiteInfo(url) {
     try {
