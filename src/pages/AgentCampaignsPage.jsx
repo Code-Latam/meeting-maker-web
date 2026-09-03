@@ -38,7 +38,8 @@ export function AgentCampaignsPage() {
     openToWorkOptions: [],
     locations: [],
     industries: [],
-    headcount: []
+    headcount: [],
+    minConnections: 0   // ← new
   });
 
   // Post Campaign Form Data
@@ -260,6 +261,7 @@ const titles = titlesRaw ? [titlesRaw.trim()] : [];
       locations: searchFormData.locations,
       industries: searchFormData.industries,
       headcount: searchFormData.headcount, 
+      minConnections: searchFormData.minConnections, 
       connectionDegree: parseInt(searchFormData.connectionDegree),
       openToWork: searchFormData.openToWork,
       hiring: searchFormData.hiring,
@@ -340,7 +342,8 @@ const titles = titlesRaw ? [titlesRaw.trim()] : [];
       openToWorkOptions: [],
       locations: [],
       industries: [],
-      headcount: []
+      headcount: [],
+      minConnections: 0
     });
   };
 
@@ -427,13 +430,11 @@ const renderSearchCampaigns = () => {
   return (
     <div className="space-y-4">
       {searchCampaigns.map((campaign) => {
-        // ✅ Use 'locations' and 'industries' from state (not locationsList/industriesList)
-        
         // Format display values
         const keywords = campaign.searchCriteria?.keywords?.join(', ') || 'Any';
         const titles = campaign.searchCriteria?.titles?.join(', ') || 'Any';
         
-        // ✅ Map location IDs to names using 'locations' state
+        // Map location IDs to names using 'locations' state
         const locationsDisplay = campaign.searchCriteria?.locations?.length > 0 
           ? campaign.searchCriteria.locations.map(locId => {
               const location = locations.find(l => l.id === locId);
@@ -441,7 +442,7 @@ const renderSearchCampaigns = () => {
             }).join(', ')
           : 'Any';
         
-        // ✅ Map industry IDs to names using 'industries' state
+        // Map industry IDs to names using 'industries' state
         const industriesDisplay = campaign.searchCriteria?.industries?.length > 0
           ? campaign.searchCriteria.industries.map(indId => {
               const industry = industries.find(i => i.id === indId);
@@ -463,6 +464,10 @@ const renderSearchCampaigns = () => {
         const headcount = campaign.searchCriteria?.headcount?.length > 0
           ? campaign.searchCriteria.headcount.map(h => headcountLabels[h] || h).join(', ')
           : 'Any';
+        
+        // ✅ NEW: get minConnections value
+        const minConnections = campaign.searchCriteria?.minConnections || 0;
+
         const connectionDegree = campaign.searchCriteria?.connectionDegree || 2;
         const minConfidence = Math.round((campaign.icpCriteria?.minConfidence || 0.6) * 100);
         const openToWork = campaign.searchCriteria?.openToWork ? '✅ Yes' : '❌ No';
@@ -506,6 +511,13 @@ const renderSearchCampaigns = () => {
               <div>
                 <span className="text-gray-500">👥 Headcount:</span>
                 <span className="ml-1 text-gray-700 font-medium">{headcount}</span>
+              </div>
+              {/* ✅ NEW: Display minConnections */}
+              <div>
+                <span className="text-gray-500">🔗 Min Connections:</span>
+                <span className="ml-1 text-gray-700 font-medium">
+                  {minConnections > 0 ? minConnections : 'None'}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500">🔗 Connection:</span>
@@ -910,6 +922,24 @@ const renderSearchCampaigns = () => {
               ⚠️ Note: Headcount data may not be available for all companies. Leads without headcount data will still be added.
             </p>
           </div>
+
+          {/* Minimum Connections */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Minimum Connections
+          </label>
+          <input
+            type="number"
+            value={searchFormData.minConnections}
+            onChange={(e) => handleSearchFormChange('minConnections', parseInt(e.target.value) || 0)}
+            min="0"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            placeholder="e.g., 500"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Only include leads with at least this many connections. Leave 0 for no filter.
+          </p>
+        </div>
 
           {/* Connection Degree */}
           <div>
