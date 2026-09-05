@@ -497,10 +497,6 @@ const renderSearchCampaigns = () => {
                 <span className="ml-1 text-gray-700 font-medium">{keywords}</span>
               </div>
               <div>
-                <span className="text-gray-500">💼 Title:</span>
-                <span className="ml-1 text-gray-700 font-medium">{titles}</span>
-              </div>
-              <div>
                 <span className="text-gray-500">📍 Location:</span>
                 <span className="ml-1 text-gray-700 font-medium">{locationsDisplay}</span>
               </div>
@@ -824,20 +820,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Separate keywords with commas</p>
           </div>
 
-          {/* Titles */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title <span className="text-gray-400 text-xs">(Optional)</span>
-            </label>
-            <input
-              type="text"
-              value={searchFormData.titles}
-              onChange={(e) => handleSearchFormChange('titles', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              placeholder="e.g., Sales Director (optional, max 1)"
-            />
-            <p className="text-xs text-gray-500 mt-1">Optional - Only one title allowed if provided</p>
-          </div>
 
           {/* Locations */}
           <div>

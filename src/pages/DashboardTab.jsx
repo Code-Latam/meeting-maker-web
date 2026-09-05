@@ -42,7 +42,7 @@ export function DashboardTab() {
     },
     avgConnections: {
       description: 'Connections accepted per active day. Reflects your targeting and profile quality.',
-      advice: '💡 Improve your profile and personalise connection requests to boost acceptance.',
+      advice: '💡 Improve your profile and campaigns targeting to boost acceptance.',
     },
     inConversation: {
       description: 'Number of active ongoing conversations.',
