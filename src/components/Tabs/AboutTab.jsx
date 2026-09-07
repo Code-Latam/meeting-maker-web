@@ -119,31 +119,31 @@ export function AboutTab() {
   const videos = [
     {
       title: 'General Overview of The Meeting Maker',
-      url: 'https://youtu.be/A5tk0rz53sI'
+      url: 'https://www.youtube.com/watch?v=uu9_BWFRmwc'
     },
     {
-      title: 'How to create your own SDR or BDR agent',
-      url: 'https://youtu.be/YR6TLKzCZgc'
+      title: 'How to setup your Meeting Maker agents',
+      url: 'https://www.youtube.com/watch?v=I_hL50OgPt8'
     },
     {
-      title: 'How to create your own Marketing Manager Agent',
-      url: 'https://youtu.be/gR5IiO2gMEo'
+      title: 'How to setup your outreach campaigns',
+      url: 'https://www.youtube.com/watch?v=XrD2feppuzw'
     },
     {
-      title: 'How to Assign prospects to your agents',
-      url: 'https://youtu.be/L6PLGWzFmWI'
+      title: 'How to setup you marketing campaigns',
+      url: 'https://www.youtube.com/watch?v=rbLqj2U-3Gg'
     },
     {
-      title: 'How to track your AI outreach performance',
-      url: 'https://youtu.be/xTToS5xjUEg'
+      title: 'How to read your Dashboard',
+      url: 'https://www.youtube.com/watch?v=gr1KXkcBHKQ'
     },
     {
-      title: 'How to setup an SEO AI Manager Agent',
-      url: 'https://youtu.be/oFPYGzWrwtM'
+      title: 'How to manage your CRM',
+      url: 'https://www.youtube.com/watch?v=Q50jAVTS5cU'
     },
     {
-      title: 'How to Set Up Your Astrolab Meeting Maker Account',
-      url: 'https://youtu.be/DArEDeVQp5E'
+      title: 'How to monitor activity and conversions',
+      url: 'https://studio.youtube.com/video/zpkwrOGdMWA/edit'
     }
   ];
 
