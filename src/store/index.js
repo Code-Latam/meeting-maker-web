@@ -232,38 +232,52 @@ export const useAuthStore = create(
         }
       },
       
-      refreshClient: async () => {
-        try {
-          console.log('🔄 Refreshing client data from /me...');
-          const response = await api.get('/auth/me');
-          if (response.data?.client) {
-            const clientData = response.data.client;
-            localStorage.setItem('client', JSON.stringify(clientData));
-            
-            // ✅ Recompute isChildClient with fullAccessForChildren flag
-            const isActuallyChild = clientData?.parentClientId !== null && 
-                                    clientData?.parentClientId !== undefined;
-            const parentAllowsFullAccess = clientData?.fullAccessForChildren === true;
-            const isChildClient = isActuallyChild && !parentAllowsFullAccess;
-            
-            localStorage.setItem('isChildClient', JSON.stringify(isChildClient));
-            
-            set({ 
-              client: clientData,
-              isChildClient: isChildClient,
-            });
-            
-            console.log('✅ Client data refreshed:', {
-              name: clientData.name,
-              isChildClient: isChildClient,
-            });
-            return clientData;
-          }
-        } catch (error) {
-          console.error('❌ Failed to refresh client:', error);
-        }
-        return null;
-      },
+  refreshClient: async () => {
+  try {
+    console.log('🔄 Refreshing client data from /me...');
+    const response = await api.get('/auth/me');
+    if (response.data?.client) {
+      const clientData = response.data.client;
+      localStorage.setItem('client', JSON.stringify(clientData));
+      
+      const isActuallyChild = clientData?.parentClientId !== null && 
+                              clientData?.parentClientId !== undefined;
+      const parentAllowsFullAccess = clientData?.fullAccessForChildren === true;
+      const isChildClient = isActuallyChild && !parentAllowsFullAccess;
+      
+      localStorage.setItem('isChildClient', JSON.stringify(isChildClient));
+      
+      // ✅ NEW: Update agencyClient if this is an agency
+      let agencyClient = get().agencyClient;
+      if (clientData?.isAgency) {
+        agencyClient = { ...clientData };
+        localStorage.setItem('agencyClient', JSON.stringify(agencyClient));
+        console.log('✅ Updated agencyClient:', {
+          name: agencyClient.name,
+          fullAccessForChildren: agencyClient.fullAccessForChildren,
+        });
+      }
+      
+      set({ 
+        client: clientData,
+        agencyClient: agencyClient,  // ✅ Now updates agencyClient too
+        isChildClient: isChildClient,
+      });
+      
+      console.log('✅ Client data refreshed:', {
+        name: clientData.name,
+        isChildClient: isChildClient,
+        fullAccessForChildren: clientData.fullAccessForChildren,
+      });
+      return clientData;
+    }
+  } catch (error) {
+    console.error('❌ Failed to refresh client:', error);
+  }
+  return null;
+},
+
+
     }),
     {
       name: 'auth-storage',
