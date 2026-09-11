@@ -66,6 +66,10 @@ export const authService = {
     localStorage.removeItem('jwt');
     localStorage.removeItem('user');
     localStorage.removeItem('client');
+    localStorage.removeItem('agencyClient');
+    localStorage.removeItem('activeClientId');
+    localStorage.removeItem('activeClientName');
+    localStorage.removeItem('isChildClient');
     window.location.href = '/login';
   },
 
@@ -99,6 +103,36 @@ export const authService = {
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to fetch profile'
+      };
+    }
+  },
+
+  // ✅ NEW: Update fullAccessForChildren flag for an agency
+  async updateFullAccessForChildren(value) {
+    console.log('🔓 updateFullAccessForChildren called with:', value);
+    try {
+      const response = await api.put('/auth/agency/full-access-for-children', {
+        fullAccessForChildren: value
+      });
+      
+      console.log('📥 Update response:', response.data);
+      
+      if (response.data.success) {
+        return { 
+          success: true, 
+          fullAccessForChildren: response.data.fullAccessForChildren 
+        };
+      }
+      
+      return { 
+        success: false, 
+        error: 'Update failed' 
+      };
+    } catch (error) {
+      console.error('❌ Update fullAccessForChildren error:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to update setting'
       };
     }
   }

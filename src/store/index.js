@@ -12,7 +12,7 @@ export const useAuthStore = create(
       token: null,
       isAuthenticated: false,
       isLoading: false,
-      isChildClient: false, // ✅ NEW: Store whether user is a child client
+      isChildClient: false,
       
       login: async (email, password) => {
         console.log('🔐 Login started...');
@@ -36,8 +36,15 @@ export const useAuthStore = create(
           }
           
           // ✅ Check if user is a child client
-          const isChildClient = clientData?.parentClientId !== null && 
-                               clientData?.parentClientId !== undefined;
+          const isActuallyChild = clientData?.parentClientId !== null && 
+                                  clientData?.parentClientId !== undefined;
+          
+          // ✅ NEW: If parent agency allows full access, child gets full access
+          const parentAllowsFullAccess = clientData?.fullAccessForChildren === true;
+          
+          // ✅ isChildClient is only true if they're a child AND don't have full access
+          const isChildClient = isActuallyChild && !parentAllowsFullAccess;
+          
           localStorage.setItem('isChildClient', JSON.stringify(isChildClient));
           
           // Store agency client if this user is an agency
@@ -61,6 +68,8 @@ export const useAuthStore = create(
           console.log('📦 Auth state:', {
             clientName: clientData?.name,
             isAgency: clientData?.isAgency,
+            isActuallyChild: isActuallyChild,
+            parentAllowsFullAccess: parentAllowsFullAccess,
             isChildClient: isChildClient,
             agencyClient: agencyClient?.name,
           });
@@ -90,7 +99,7 @@ export const useAuthStore = create(
         });
       },
       
-      checkAuth: () => {
+      checkAuth: async () => {
         console.log('🔍 Checking auth...');
         const token = localStorage.getItem('jwt');
         
@@ -108,71 +117,118 @@ export const useAuthStore = create(
           return false;
         }
 
-        const user = authService.getCurrentUser();
-        
-        let client = null;
-        let agencyClient = null;
-        let isChildClient = false;
-        
+        // ✅ Refresh from /me to get the latest fullAccessForChildren flag
         try {
-          const clientData = localStorage.getItem('client');
-          if (clientData) client = JSON.parse(clientData);
-          const agencyData = localStorage.getItem('agencyClient');
-          if (agencyData) agencyClient = JSON.parse(agencyData);
-          // ✅ Restore isChildClient from localStorage
-          const childData = localStorage.getItem('isChildClient');
-          if (childData) isChildClient = JSON.parse(childData);
-        } catch (e) {
-          console.error('Error parsing client data:', e);
-        }
-        
-        // ✅ Restore the selected client from localStorage
-        const savedActiveClientId = localStorage.getItem('activeClientId');
-        const savedActiveClientName = localStorage.getItem('activeClientName');
-        
-        if (savedActiveClientId && agencyClient) {
-          if (savedActiveClientId === agencyClient._id) {
-            // Viewing agency
-            client = { ...agencyClient };
-            console.log('✅ Restored agency client:', client.name);
+          console.log('📦 Fetching fresh data from /me...');
+          const meResponse = await api.get('/auth/me');
+          const userData = meResponse.data.user;
+          const clientData = meResponse.data.client;
+          
+          // Store fresh data in localStorage
+          localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('client', JSON.stringify(clientData));
+          
+          // ✅ Detect child status with fullAccessForChildren flag
+          const isActuallyChild = clientData?.parentClientId !== null && 
+                                  clientData?.parentClientId !== undefined;
+          const parentAllowsFullAccess = clientData?.fullAccessForChildren === true;
+          const isChildClient = isActuallyChild && !parentAllowsFullAccess;
+          
+          localStorage.setItem('isChildClient', JSON.stringify(isChildClient));
+          
+          // Store agency client if this user is an agency
+          let agencyClient = null;
+          if (clientData?.isAgency) {
+            agencyClient = { ...clientData };
+            localStorage.setItem('agencyClient', JSON.stringify(agencyClient));
           } else {
-            // Viewing a child - create a minimal client object
-            client = {
-              ...client,
+            // Check if agencyClient exists in localStorage
+            try {
+              const agencyData = localStorage.getItem('agencyClient');
+              if (agencyData) agencyClient = JSON.parse(agencyData);
+            } catch (e) {
+              agencyClient = null;
+            }
+          }
+          
+          // Restore active client if agency is viewing a child
+          let activeClient = clientData;
+          const savedActiveClientId = localStorage.getItem('activeClientId');
+          const savedActiveClientName = localStorage.getItem('activeClientName');
+          
+          if (savedActiveClientId && agencyClient && savedActiveClientId !== agencyClient._id) {
+            // Agency is viewing a child
+            activeClient = {
+              ...clientData,
               _id: savedActiveClientId,
               name: savedActiveClientName || 'Child Client',
               isAgency: false,
             };
-            console.log('✅ Restored child client:', client.name);
+            console.log('✅ Restored child client view:', activeClient.name);
           }
-        } else if (agencyClient) {
-          // Default to agency
-          client = { ...agencyClient };
-          console.log('✅ Default to agency client:', client.name);
-        }
-        
-        if (token && user) {
+          
           set({
-            user,
-            client,
-            agencyClient,
-            token,
+            user: userData,
+            client: activeClient,
+            agencyClient: agencyClient,
+            token: token,
             isAuthenticated: true,
             isLoading: false,
             isChildClient: isChildClient,
           });
-          return true;
-        } else {
-          set({
-            user: null,
-            client: null,
-            agencyClient: null,
-            token: null,
-            isAuthenticated: false,
-            isLoading: false,
-            isChildClient: false,
+          
+          console.log('✅ Auth check complete:', {
+            clientName: activeClient?.name,
+            isChildClient: isChildClient,
+            parentAllowsFullAccess: parentAllowsFullAccess,
           });
-          return false;
+          
+          return true;
+          
+        } catch (error) {
+          console.error('❌ Failed to fetch /me, falling back to localStorage:', error);
+          
+          // Fallback to localStorage
+          const user = authService.getCurrentUser();
+          
+          let client = null;
+          let agencyClient = null;
+          let isChildClient = false;
+          
+          try {
+            const clientData = localStorage.getItem('client');
+            if (clientData) client = JSON.parse(clientData);
+            const agencyData = localStorage.getItem('agencyClient');
+            if (agencyData) agencyClient = JSON.parse(agencyData);
+            const childData = localStorage.getItem('isChildClient');
+            if (childData) isChildClient = JSON.parse(childData);
+          } catch (e) {
+            console.error('Error parsing client data:', e);
+          }
+          
+          if (token && user) {
+            set({
+              user,
+              client,
+              agencyClient,
+              token,
+              isAuthenticated: true,
+              isLoading: false,
+              isChildClient: isChildClient,
+            });
+            return true;
+          } else {
+            set({
+              user: null,
+              client: null,
+              agencyClient: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+              isChildClient: false,
+            });
+            return false;
+          }
         }
       },
       
@@ -183,8 +239,24 @@ export const useAuthStore = create(
           if (response.data?.client) {
             const clientData = response.data.client;
             localStorage.setItem('client', JSON.stringify(clientData));
-            set({ client: clientData });
-            console.log('✅ Client data refreshed:', clientData);
+            
+            // ✅ Recompute isChildClient with fullAccessForChildren flag
+            const isActuallyChild = clientData?.parentClientId !== null && 
+                                    clientData?.parentClientId !== undefined;
+            const parentAllowsFullAccess = clientData?.fullAccessForChildren === true;
+            const isChildClient = isActuallyChild && !parentAllowsFullAccess;
+            
+            localStorage.setItem('isChildClient', JSON.stringify(isChildClient));
+            
+            set({ 
+              client: clientData,
+              isChildClient: isChildClient,
+            });
+            
+            console.log('✅ Client data refreshed:', {
+              name: clientData.name,
+              isChildClient: isChildClient,
+            });
             return clientData;
           }
         } catch (error) {

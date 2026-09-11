@@ -1,18 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store';
 import { api } from '../services/api';
+import { authService } from '../services/auth'; // ✅ NEW
 import { AddChildModal } from '../components/Agency/AddChildModal';
 
 export function Agency() {
-  const { client, agencyClient } = useAuthStore();
+  const { client, agencyClient, refreshClient } = useAuthStore(); // ✅ Added refreshClient
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [error, setError] = useState(null);
   const [removingId, setRemovingId] = useState(null);
 
+  // ✅ NEW: Full access for children toggle
+  const [fullAccessForChildren, setFullAccessForChildren] = useState(
+    agencyClient?.fullAccessForChildren || false
+  );
+  const [updatingFlag, setUpdatingFlag] = useState(false);
+
   // Check if user is an agency
- const isAgency = agencyClient?.isAgency || false;
+  const isAgency = agencyClient?.isAgency || false;
+
+  // ✅ NEW: Sync state when agencyClient changes
+  useEffect(() => {
+    if (agencyClient) {
+      setFullAccessForChildren(agencyClient.fullAccessForChildren || false);
+    }
+  }, [agencyClient]);
 
   // Fetch children
   const fetchChildren = async () => {
@@ -52,6 +66,34 @@ export function Agency() {
       alert(err.response?.data?.error || 'Failed to remove client');
     } finally {
       setRemovingId(null);
+    }
+  };
+
+  // ✅ NEW: Handler to toggle the fullAccessForChildren flag
+  const handleToggleFullAccess = async () => {
+    const newValue = !fullAccessForChildren;
+
+    if (!confirm(`Are you sure you want to ${newValue ? 'ENABLE' : 'DISABLE'} full access for child clients?`)) {
+      return;
+    }
+
+    setUpdatingFlag(true);
+    try {
+      const result = await authService.updateFullAccessForChildren(newValue);
+
+      if (result.success) {
+        setFullAccessForChildren(newValue);
+        // Refresh the agency client data in the store
+        await refreshClient();
+        alert(`Full access for children is now ${newValue ? 'ENABLED' : 'DISABLED'}`);
+      } else {
+        alert(result.error || 'Failed to update setting');
+      }
+    } catch (err) {
+      console.error('Error updating full access setting:', err);
+      alert('Error updating setting');
+    } finally {
+      setUpdatingFlag(false);
     }
   };
 
@@ -109,6 +151,41 @@ export function Agency() {
         </div>
       </div>
 
+      {/* ✅ NEW: Full Access for Children Toggle */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="font-medium text-gray-800 flex items-center gap-2">
+              🔓 Full Access for Child Clients
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              When enabled, child clients will have full access to all features
+              (Agents, Ranking, About) when they log in on their own.
+              When disabled, they will have limited access.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Current status: <strong>{fullAccessForChildren ? 'Enabled' : 'Disabled'}</strong>
+            </p>
+          </div>
+          <button
+            onClick={handleToggleFullAccess}
+            disabled={updatingFlag}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              fullAccessForChildren
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            } ${updatingFlag ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {updatingFlag
+              ? '⏳ Updating...'
+              : fullAccessForChildren
+                ? '✅ Enabled'
+                : '❌ Disabled'
+            }
+          </button>
+        </div>
+      </div>
+
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -121,7 +198,7 @@ export function Agency() {
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
           <h2 className="font-medium text-gray-700">Your Clients</h2>
         </div>
-        
+
         {loading ? (
           <div className="p-8 text-center text-gray-500">
             <div className="animate-pulse">Loading...</div>
