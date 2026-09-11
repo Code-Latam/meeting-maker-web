@@ -128,7 +128,7 @@ export function DesktopSidebar() {
     // ✅ Check if account needs reconnection
     if (linkedinStatus.needsReconnect && linkedinStatus.unipileAccountId) {
       // Agency on own account - hide reconnect
-      if (isAgency && !isAgencyViewingChild) return null;
+      //if (isAgency && !isAgencyViewingChild) return null;
       
       // Agency viewing child or regular client - show reconnect
       return {
@@ -141,7 +141,7 @@ export function DesktopSidebar() {
     // ✅ No account at all - show connect
     if (!linkedinStatus.unipileAccountId) {
       // Agency on own account - hide connect
-      if (isAgency && !isAgencyViewingChild) return null;
+      // if (isAgency && !isAgencyViewingChild) return null;
       
       return {
         label: isAgencyViewingChild ? '🔗 Generate Connection Link' : '🔗 Connect LinkedIn',
