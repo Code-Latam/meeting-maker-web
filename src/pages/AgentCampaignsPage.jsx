@@ -23,6 +23,8 @@ export function AgentCampaignsPage() {
   const [industries, setIndustries] = useState([]);
   
   // Search Campaign Form Data
+  // NOTE: activeStart / activeEnd are kept for backend compatibility even
+  // though they are no longer editable in the UI.
   const [searchFormData, setSearchFormData] = useState({
     name: '',
     channel: 'linkedin',
@@ -249,6 +251,8 @@ const titles = titlesRaw ? [titlesRaw.trim()] : [];
     channel: searchFormData.channel,
     dailyLimit: searchFormData.dailyLimit,
     agentId,
+    // NOTE: activeHours is still sent to satisfy backend schema even though
+    // it is no longer exposed in the UI. Values default to 8 → 18.
     schedule: {
       activeHours: {
         start: searchFormData.activeStart,
@@ -541,23 +545,33 @@ const renderSearchCampaigns = () => {
               </div>
             )}
 
-            {/* Stats Row */}
-            <div className="mt-3 grid grid-cols-4 gap-2 text-sm border-t border-gray-100 pt-3">
-              <div>
-                <span className="text-gray-500">📊 Found:</span>
-                <span className="ml-1 text-gray-700 font-medium">{campaign.stats?.leadsFound || 0}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">✅ Qualified:</span>
-                <span className="ml-1 text-gray-700 font-medium">{campaign.stats?.leadsQualified || 0}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">➕ Added:</span>
-                <span className="ml-1 text-gray-700 font-medium">{campaign.stats?.leadsAdded || 0}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">📅 Today:</span>
-                <span className="ml-1 text-gray-700 font-medium">{campaign.dailyProcessed || 0} / {campaign.dailyLimit}</span>
+            {/* =====================================================
+                Funnel Row — cumulative lead pipeline
+                Found → In DB (skipped) → Qualified → Added
+                ===================================================== */}
+            <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
+                <span title="Raw LinkedIn profiles returned by search (cumulative)">
+                  📊 Found <strong className="text-gray-800">{campaign.stats?.leadsFound || 0}</strong>
+                </span>
+                <span className="text-gray-300">→</span>
+                <span
+                  className="cursor-help"
+                  title="Already existed in Meeting Maker — skipped before AI scoring (cumulative)"
+                >
+                  🔁 In DB <strong className="text-gray-800">{campaign.stats?.leadsAlreadyInDb || 0}</strong>
+                </span>
+                <span className="text-gray-300">→</span>
+                <span title="Passed all filters + AI confidence threshold (cumulative)">
+                  ✅ Qualified <strong className="text-gray-800">{campaign.stats?.leadsQualified || 0}</strong>
+                </span>
+                <span className="text-gray-300">→</span>
+                <span title="Net-new contacts written to Meeting Maker (cumulative)">
+                  ➕ Added <strong className="text-gray-800">{campaign.stats?.leadsAdded || 0}</strong>
+                </span>
+                <span className="ml-auto text-gray-500" title="New contacts added today / daily cap">
+                  📅 {campaign.dailyProcessed || 0} / {campaign.dailyLimit} today
+                </span>
               </div>
             </div>
 
@@ -775,35 +789,9 @@ const renderSearchCampaigns = () => {
             </p>
           </div>
 
-          {/* Active Hours */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Active Hours Start
-              </label>
-              <input
-                type="number"
-                value={searchFormData.activeStart}
-                onChange={(e) => handleSearchFormChange('activeStart', parseInt(e.target.value) || 0)}
-                min="0"
-                max="23"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Active Hours End
-              </label>
-              <input
-                type="number"
-                value={searchFormData.activeEnd}
-                onChange={(e) => handleSearchFormChange('activeEnd', parseInt(e.target.value) || 0)}
-                min="0"
-                max="23"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
-            </div>
-          </div>
+          {/* NOTE: Active Hours fields removed from UI.
+              activeStart / activeEnd still flow into data.schedule.activeHours
+              so the backend schema remains satisfied. */}
 
           {/* Keywords */}
           <div>
@@ -815,11 +803,13 @@ const renderSearchCampaigns = () => {
               value={searchFormData.keywords}
               onChange={(e) => handleSearchFormChange('keywords', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              placeholder="e.g., sales director, VP of sales"
+              placeholder="e.g., sales director, VP of sales, head of growth"
             />
-            <p className="text-xs text-gray-500 mt-1">Separate keywords with commas</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Separate keywords with commas. Keywords are combined with <strong>OR</strong> —
+              leads matching <em>any</em> of the keywords will be considered.
+            </p>
           </div>
-
 
           {/* Locations */}
           <div>
