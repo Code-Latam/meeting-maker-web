@@ -591,140 +591,172 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         </p>
       </div>
 
-      {/* ============================================================
-          Channel Limits (with per-channel conversation strategy)
-         ============================================================ */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700">Channel Limits</label>
-          <button
-            type="button"
-            onClick={addChannelLimit}
-            className="text-sm text-primary-600 hover:text-primary-700"
+     {/* ============================================================
+    Channel Limits (with per-channel conversation strategy)
+   ============================================================ */}
+<div>
+  <div className="flex items-center justify-between mb-2">
+    <label className="text-sm font-medium text-gray-700">Channel Limits</label>
+    <button
+      type="button"
+      onClick={addChannelLimit}
+      className="text-sm text-primary-600 hover:text-primary-700"
+    >
+      + Add
+    </button>
+  </div>
+
+  <p className="text-xs text-gray-500 mb-3">
+    Rate limits protect your account from being flagged. The <strong>conversation
+    strategy</strong> controls how far the agent carries each conversation.
+  </p>
+
+  {formData.channelLimits.map((limit, index) => (
+    <div
+      key={index}
+      className="border border-gray-200 rounded-lg p-4 mb-3 space-y-4 bg-gray-50"
+    >
+      {/* ── Channel selector + remove ─────────────────────── */}
+      <div className="flex gap-2 items-center">
+        <div className="flex-1">
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Channel
+          </label>
+          <select
+            value={limit.channel}
+            onChange={(e) => updateChannelLimit(index, 'channel', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
           >
-            + Add
-          </button>
+            <option value="linkedIn">LinkedIn</option>
+            <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="sms">SMS</option>
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={() => removeChannelLimit(index)}
+          className="mt-5 px-3 py-2 text-gray-400 hover:text-red-500"
+          title="Remove this channel"
+        >
+          ✕
+        </button>
+      </div>
+
+     {/* ── Rate limits (grouped with heading) ────────────── */}
+<div>
+  <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+    Daily Rate Limits
+  </div>
+
+  <div className="grid grid-cols-2 gap-3">
+    {/* Daily connections */}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">
+        Max Connections / Day
+      </label>
+      <input
+        type="number"
+        value={limit.maxConnectionsPerDay}
+        onChange={(e) =>
+          updateChannelLimit(index, 'maxConnectionsPerDay', parseInt(e.target.value) || 0)
+        }
+        min="0"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+      />
+      <p className="text-[11px] text-gray-400 mt-0.5">
+        Invites sent per day
+      </p>
+    </div>
+
+    {/* Daily messages */}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">
+        Max Messages / Day
+      </label>
+      <input
+        type="number"
+        value={limit.maxMessagesPerDay}
+        onChange={(e) =>
+          updateChannelLimit(index, 'maxMessagesPerDay', parseInt(e.target.value) || 0)
+        }
+        min="0"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+      />
+      <p className="text-[11px] text-gray-400 mt-0.5">
+        Messages sent per day
+      </p>
+    </div>
+  </div>
+</div>
+
+      {/* ── Conversation strategy ─────────────────────────── */}
+      <div className="pt-3 border-t border-gray-200">
+        <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+          Conversation Strategy
         </div>
 
-        {formData.channelLimits.map((limit, index) => (
-          <div
-            key={index}
-            className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2 bg-gray-50"
-          >
-            {/* Channel + Remove */}
-            <div className="flex gap-2 items-center">
-              <select
-                value={limit.channel}
-                onChange={(e) => updateChannelLimit(index, 'channel', e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              >
-                <option value="linkedIn">LinkedIn</option>
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="sms">SMS</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => removeChannelLimit(index)}
-                className="px-3 text-gray-400 hover:text-red-500"
-              >
-                ✕
-              </button>
-            </div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          How far should the agent take each conversation?
+        </label>
+        <select
+          value={limit.conversationMode || 'until_meeting'}
+          onChange={(e) => {
+            const mode = e.target.value;
+            updateChannelLimit(index, 'conversationMode', mode);
+            // Sensible default when switching to "limited" for the first time
+            if (
+              mode === 'limited' &&
+              (!limit.maxOutboundMessages || limit.maxOutboundMessages < 1)
+            ) {
+              updateChannelLimit(index, 'maxOutboundMessages', 1);
+            }
+          }}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+        >
+          <option value="until_meeting">
+            Converse until meeting / goal  —  agent keeps replying
+          </option>
+          <option value="limited">
+            Limit to first N messages  —  agent pauses after N sends
+          </option>
+        </select>
 
-            {/* Rate limits grid */}
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                value={limit.maxConnectionsPerDay}
-                onChange={(e) =>
-                  updateChannelLimit(index, 'maxConnectionsPerDay', parseInt(e.target.value) || 0)
-                }
-                min="0"
-                placeholder="Max Connections / day"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
-              <input
-                type="number"
-                value={limit.maxMessagesPerDay}
-                onChange={(e) =>
-                  updateChannelLimit(index, 'maxMessagesPerDay', parseInt(e.target.value) || 0)
-                }
-                min="0"
-                placeholder="Max Messages / day"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
-              <input
-                type="number"
-                value={limit.maxConnectionsPerHour ?? 5}
-                onChange={(e) =>
-                  updateChannelLimit(index, 'maxConnectionsPerHour', parseInt(e.target.value) || 0)
-                }
-                min="0"
-                placeholder="Max Connections / hour"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
-              <input
-                type="number"
-                value={limit.maxMessagesPerHour ?? 15}
-                onChange={(e) =>
-                  updateChannelLimit(index, 'maxMessagesPerHour', parseInt(e.target.value) || 0)
-                }
-                min="0"
-                placeholder="Max Messages / hour"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
-            </div>
+        {limit.conversationMode === 'until_meeting' && (
+          <p className="text-[11px] text-gray-500 mt-1">
+            The agent will keep the conversation going end-to-end until it books a
+            meeting, gets marked converted, or the person becomes unresponsive.
+          </p>
+        )}
 
-            {/* ✅ NEW: Conversation Strategy for this channel */}
-            <div className="pt-2 border-t border-gray-200">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Conversation Strategy
-              </label>
-              <select
-                value={limit.conversationMode || 'until_meeting'}
-                onChange={(e) => {
-                  const mode = e.target.value;
-                  updateChannelLimit(index, 'conversationMode', mode);
-                  // Sensible default when switching to "limited" for the first time
-                  if (
-                    mode === 'limited' &&
-                    (!limit.maxOutboundMessages || limit.maxOutboundMessages < 1)
-                  ) {
-                    updateChannelLimit(index, 'maxOutboundMessages', 1);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              >
-                <option value="until_meeting">Converse until meeting / goal</option>
-                <option value="limited">Limit to first N messages</option>
-              </select>
-
-              {limit.conversationMode === 'limited' && (
-                <div className="mt-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Max Outbound Messages
-                  </label>
-                  <input
-                    type="number"
-                    value={limit.maxOutboundMessages || 0}
-                    onChange={(e) =>
-                      updateChannelLimit(index, 'maxOutboundMessages', parseInt(e.target.value) || 0)
-                    }
-                    min="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                    placeholder="e.g., 3"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    After sending this many messages on a thread, the agent will pause it
-                    (state = "paused", reason = "max_messages_reached").
-                  </p>
-                </div>
-              )}
-            </div>
+        {limit.conversationMode === 'limited' && (
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Max Outbound Messages <span className="text-gray-400">(per thread)</span>
+            </label>
+            <input
+              type="number"
+              value={limit.maxOutboundMessages || 0}
+              onChange={(e) =>
+                updateChannelLimit(index, 'maxOutboundMessages', parseInt(e.target.value) || 0)
+              }
+              min="1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+              placeholder="e.g., 3"
+            />
+            <p className="text-[11px] text-gray-500 mt-1">
+              After sending this many messages on a single thread, the agent will set
+              the thread to <span className="font-mono">paused</span> with reason
+              <span className="font-mono"> max_messages_reached</span> and stop —
+              unless you manually set it to
+              <span className="font-mono"> "In Conversation (Ignore Limits)"</span>.
+            </p>
           </div>
-        ))}
+        )}
       </div>
+    </div>
+  ))}
+</div>
 
       <div className="flex gap-3 pt-4">
         <button
