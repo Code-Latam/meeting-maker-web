@@ -7,15 +7,25 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   const { showToast } = useUIStore();
   const { client } = useAuthStore();
   const { activeClientId } = useAppStore();
-  
+
   const clientId = activeClientId || client?.id;
-  
+
   console.log('🔍 [AgentForm] clientId:', clientId);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [isGeneratingServices, setIsGeneratingServices] = useState(false);
-  
+
+  const defaultChannelLimit = {
+    channel: 'linkedIn',
+    maxConnectionsPerDay: 0,
+    maxMessagesPerDay: 0,
+    maxConnectionsPerHour: 5,
+    maxMessagesPerHour: 15,
+    conversationMode: 'until_meeting',   // ✅ NEW
+    maxOutboundMessages: 0               // ✅ NEW
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     role: '',
@@ -34,7 +44,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     dos: [],
     donts: [],
     fallbackGoals: [],
-    channelLimits: [{ channel: 'linkedIn', maxConnectionsPerDay: 0, maxMessagesPerDay: 0 }]
+    channelLimits: [{ ...defaultChannelLimit }]
   });
 
   useEffect(() => {
@@ -54,14 +64,26 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         dos: agent.dos || [],
         donts: agent.donts || [],
         fallbackGoals: agent.fallbackGoals || [],
-        channelLimits: agent.channelLimits || [{ channel: 'linkedIn', maxConnectionsPerDay: 0, maxMessagesPerDay: 0 }]
+        channelLimits: (agent.channelLimits && agent.channelLimits.length > 0
+          ? agent.channelLimits
+          : [{ ...defaultChannelLimit }]
+        ).map((cl) => ({
+          ...cl,
+          conversationMode: cl.conversationMode || 'until_meeting',
+          maxOutboundMessages:
+            typeof cl.maxOutboundMessages === 'number' ? cl.maxOutboundMessages : 0,
+          maxConnectionsPerHour:
+            typeof cl.maxConnectionsPerHour === 'number' ? cl.maxConnectionsPerHour : 5,
+          maxMessagesPerHour:
+            typeof cl.maxMessagesPerHour === 'number' ? cl.maxMessagesPerHour : 15
+        }))
       });
     }
   }, [agent]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       showToast('Agent name is required', 'error');
       return;
@@ -75,8 +97,22 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       return;
     }
 
+    // ✅ NEW: validate "limited" mode has a positive cap
+    for (const [index, limit] of formData.channelLimits.entries()) {
+      if (limit.conversationMode === 'limited') {
+        const n = Number(limit.maxOutboundMessages);
+        if (!Number.isFinite(n) || n < 1) {
+          showToast(
+            `Channel "${limit.channel}" (row ${index + 1}): Max Outbound Messages must be at least 1`,
+            'error'
+          );
+          return;
+        }
+      }
+    }
+
     setIsLoading(true);
-    const result = agent 
+    const result = agent
       ? await updateAgent(agent._id, formData)
       : await createAgent(formData);
 
@@ -125,10 +161,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   const addChannelLimit = () => {
     setFormData(prev => ({
       ...prev,
-      channelLimits: [
-        ...prev.channelLimits,
-        { channel: 'linkedIn', maxConnectionsPerDay: 0, maxMessagesPerDay: 0 }
-      ]
+      channelLimits: [...prev.channelLimits, { ...defaultChannelLimit }]
     }));
   };
 
@@ -151,7 +184,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   // Generate Persona - Uses client-specific website data from localStorage
   const handleGeneratePersona = async () => {
     console.log('🔄 [AgentForm] handleGeneratePersona called');
-    
+
     if (!formData.role) {
       showToast('Please select a role first', 'error');
       return;
@@ -185,7 +218,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     setIsGeneratingPersona(true);
     try {
       const token = localStorage.getItem('jwt');
-      
+
       const cleanWebsiteData = {
         aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
         businessServices: websiteData.data?.businessServices || websiteData.services || '',
@@ -239,7 +272,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   // Generate Services - Uses client-specific website data from localStorage
   const handleGenerateServices = async () => {
     console.log('🔄 [AgentForm] handleGenerateServices called');
-    
+
     // Get website data from localStorage using client ID
     let websiteData = null;
     if (clientId) {
@@ -268,7 +301,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     setIsGeneratingServices(true);
     try {
       const token = localStorage.getItem('jwt');
-      
+
       const cleanWebsiteData = {
         aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
         businessServices: websiteData.data?.businessServices || websiteData.services || '',
@@ -321,7 +354,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-      {/* ... rest of the form (same as before) ... */}
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Agent Name *
@@ -558,7 +591,9 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         </p>
       </div>
 
-      {/* Channel Limits */}
+      {/* ============================================================
+          Channel Limits (with per-channel conversation strategy)
+         ============================================================ */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-700">Channel Limits</label>
@@ -570,41 +605,123 @@ export function AgentForm({ agent, onClose, onSuccess }) {
             + Add
           </button>
         </div>
+
         {formData.channelLimits.map((limit, index) => (
-          <div key={index} className="flex gap-2 mb-2 items-center">
-            <select
-              value={limit.channel}
-              onChange={(e) => updateChannelLimit(index, 'channel', e.target.value)}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-            >
-              <option value="linkedIn">LinkedIn</option>
-              <option value="email">Email</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="sms">SMS</option>
-            </select>
-            <input
-              type="number"
-              value={limit.maxConnectionsPerDay}
-              onChange={(e) => updateChannelLimit(index, 'maxConnectionsPerDay', parseInt(e.target.value) || 0)}
-              min="0"
-              placeholder="Max Conn."
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-            />
-            <input
-              type="number"
-              value={limit.maxMessagesPerDay}
-              onChange={(e) => updateChannelLimit(index, 'maxMessagesPerDay', parseInt(e.target.value) || 0)}
-              min="0"
-              placeholder="Max Msg."
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => removeChannelLimit(index)}
-              className="px-3 text-gray-400 hover:text-red-500"
-            >
-              ✕
-            </button>
+          <div
+            key={index}
+            className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2 bg-gray-50"
+          >
+            {/* Channel + Remove */}
+            <div className="flex gap-2 items-center">
+              <select
+                value={limit.channel}
+                onChange={(e) => updateChannelLimit(index, 'channel', e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              >
+                <option value="linkedIn">LinkedIn</option>
+                <option value="email">Email</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="sms">SMS</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => removeChannelLimit(index)}
+                className="px-3 text-gray-400 hover:text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Rate limits grid */}
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                value={limit.maxConnectionsPerDay}
+                onChange={(e) =>
+                  updateChannelLimit(index, 'maxConnectionsPerDay', parseInt(e.target.value) || 0)
+                }
+                min="0"
+                placeholder="Max Connections / day"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+              <input
+                type="number"
+                value={limit.maxMessagesPerDay}
+                onChange={(e) =>
+                  updateChannelLimit(index, 'maxMessagesPerDay', parseInt(e.target.value) || 0)
+                }
+                min="0"
+                placeholder="Max Messages / day"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+              <input
+                type="number"
+                value={limit.maxConnectionsPerHour ?? 5}
+                onChange={(e) =>
+                  updateChannelLimit(index, 'maxConnectionsPerHour', parseInt(e.target.value) || 0)
+                }
+                min="0"
+                placeholder="Max Connections / hour"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+              <input
+                type="number"
+                value={limit.maxMessagesPerHour ?? 15}
+                onChange={(e) =>
+                  updateChannelLimit(index, 'maxMessagesPerHour', parseInt(e.target.value) || 0)
+                }
+                min="0"
+                placeholder="Max Messages / hour"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            {/* ✅ NEW: Conversation Strategy for this channel */}
+            <div className="pt-2 border-t border-gray-200">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Conversation Strategy
+              </label>
+              <select
+                value={limit.conversationMode || 'until_meeting'}
+                onChange={(e) => {
+                  const mode = e.target.value;
+                  updateChannelLimit(index, 'conversationMode', mode);
+                  // Sensible default when switching to "limited" for the first time
+                  if (
+                    mode === 'limited' &&
+                    (!limit.maxOutboundMessages || limit.maxOutboundMessages < 1)
+                  ) {
+                    updateChannelLimit(index, 'maxOutboundMessages', 1);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              >
+                <option value="until_meeting">Converse until meeting / goal</option>
+                <option value="limited">Limit to first N messages</option>
+              </select>
+
+              {limit.conversationMode === 'limited' && (
+                <div className="mt-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Max Outbound Messages
+                  </label>
+                  <input
+                    type="number"
+                    value={limit.maxOutboundMessages || 0}
+                    onChange={(e) =>
+                      updateChannelLimit(index, 'maxOutboundMessages', parseInt(e.target.value) || 0)
+                    }
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    placeholder="e.g., 3"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    After sending this many messages on a thread, the agent will pause it
+                    (state = "paused", reason = "max_messages_reached").
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

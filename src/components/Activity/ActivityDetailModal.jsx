@@ -777,6 +777,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                 <option value="connected">Connected</option>
                 <option value="pending-connection">Pending Connection</option>
                 <option value="in-conversation">In Conversation</option>
+                <option value="in-conversation-ignoring-limits">In Conversation (Ignore Limits)</option>
                 <option value="paused">Paused</option>
                 <option value="converted">Converted</option>
                 <option value="irrelevant">Irrelevant</option>
@@ -845,6 +846,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                 <option value="">-- No state --</option>
                 <option value="open">Open</option>
                 <option value="in-conversation">In Conversation</option>
+                <option value="in-conversation-ignoring-limits">In Conversation (Ignore Limits)</option>
                 <option value="paused">Paused</option>
                 <option value="converted">Converted</option>
                 <option value="irrelevant">Irrelevant</option>
