@@ -20,11 +20,13 @@ export function AgentCampaignsPage() {
   const [isAiEditModalOpen, setIsAiEditModalOpen] = useState(false);
   const [aiFormData, setAiFormData] = useState({
     name: '',
-    dailyLimit: 10
+    dailyLimit: 10,
+    channel: 'linkedin'
   });
   const [aiEditFormData, setAiEditFormData] = useState({
     name: '',
-    dailyLimit: 10
+    dailyLimit: 10,
+    channel: 'linkedin'
   });
 
   // Search + Post campaigns
@@ -362,6 +364,10 @@ export function AgentCampaignsPage() {
     setAiEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const resetAiForm = () => {
+    setAiFormData({ name: '', dailyLimit: 10, channel: 'linkedin' });
+  };
+
   const handleAiCreate = async (e) => {
     e.preventDefault();
 
@@ -379,13 +385,14 @@ export function AgentCampaignsPage() {
     const result = await campaignsService.createAiCampaign({
       agentId,
       name: aiFormData.name.trim(),
-      dailyLimit: limit
+      dailyLimit: limit,
+      channel: aiFormData.channel
     });
 
     if (result.success) {
       showToast('AI campaign created', 'success');
       setIsAiModalOpen(false);
-      setAiFormData({ name: '', dailyLimit: 10 });
+      resetAiForm();
       await loadAiCampaign();
     } else {
       showToast(result.error || 'Failed to create AI campaign', 'error');
@@ -396,7 +403,8 @@ export function AgentCampaignsPage() {
     if (!aiCampaign) return;
     setAiEditFormData({
       name: aiCampaign.name,
-      dailyLimit: aiCampaign.dailyLimit
+      dailyLimit: aiCampaign.dailyLimit,
+      channel: aiCampaign.channel || 'linkedin'
     });
     setIsAiEditModalOpen(true);
   };
@@ -418,15 +426,22 @@ export function AgentCampaignsPage() {
       return;
     }
 
+    const selectedChannel = aiEditFormData.channel || 'linkedin';
+
     // If nothing changed, just close the modal
-    if (trimmedName === aiCampaign.name && limit === aiCampaign.dailyLimit) {
+    if (
+      trimmedName === aiCampaign.name &&
+      limit === aiCampaign.dailyLimit &&
+      selectedChannel === (aiCampaign.channel || 'linkedin')
+    ) {
       setIsAiEditModalOpen(false);
       return;
     }
 
     const result = await campaignsService.updateAiCampaign(aiCampaign._id, {
       name: trimmedName,
-      dailyLimit: limit
+      dailyLimit: limit,
+      channel: selectedChannel
     });
 
     if (result.success) {
@@ -536,7 +551,7 @@ export function AgentCampaignsPage() {
           </p>
           <button
             onClick={() => {
-              setAiFormData({ name: 'AI Campaign', dailyLimit: 10 });
+              setAiFormData({ name: 'AI Campaign', dailyLimit: 10, channel: 'linkedin' });
               setIsAiModalOpen(true);
             }}
             className="btn-primary text-sm"
@@ -551,6 +566,7 @@ export function AgentCampaignsPage() {
     const stats = aiCampaign.stats || {};
     const dailyProcessed = aiCampaign.dailyProcessed || 0;
     const dailyLimit = aiCampaign.dailyLimit || 30;
+    const channel = aiCampaign.channel || 'linkedin';
 
     return (
       <div className="bg-white rounded-lg border-2 border-primary-100 p-5 hover:shadow-md transition-shadow">
@@ -564,7 +580,10 @@ export function AgentCampaignsPage() {
               <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusClass(aiCampaign.status)}`}>
                 {aiCampaign.status.charAt(0).toUpperCase() + aiCampaign.status.slice(1)}
               </span>
-              <span className="text-xs text-gray-500">AI-driven campaign</span>
+              <span className="text-xs text-gray-500">
+                {channel === 'email' ? '📧 Email' : '🔗 LinkedIn'}
+              </span>
+              <span className="text-xs text-gray-400">· AI-driven campaign</span>
             </div>
           </div>
 
@@ -899,7 +918,7 @@ export function AgentCampaignsPage() {
           <button
             onClick={() => {
               if (activeTab === 'ai') {
-                setAiFormData({ name: 'AI Campaign', dailyLimit: 10 });
+                setAiFormData({ name: 'AI Campaign', dailyLimit: 10, channel: 'linkedin' });
                 setIsAiModalOpen(true);
               } else {
                 setModalType(activeTab === 'search' ? 'search' : 'post');
@@ -963,7 +982,7 @@ export function AgentCampaignsPage() {
       {/* ===================================================== */}
       <Modal
         isOpen={isAiModalOpen}
-        onClose={() => { setIsAiModalOpen(false); setAiFormData({ name: '', dailyLimit: 10 }); }}
+        onClose={() => { setIsAiModalOpen(false); resetAiForm(); }}
         title="Create AI Campaign"
         maxWidth="md"
       >
@@ -985,6 +1004,23 @@ export function AgentCampaignsPage() {
               placeholder="e.g., AI Outreach Campaign"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Channel *
+            </label>
+            <select
+              value={aiFormData.channel}
+              onChange={(e) => handleAiFormChange('channel', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            >
+              <option value="linkedin">🔗 LinkedIn</option>
+              <option value="email">📧 Email</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              The channel the AI campaign uses to reach leads.
+            </p>
           </div>
 
           <div>
@@ -1011,7 +1047,7 @@ export function AgentCampaignsPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setIsAiModalOpen(false); setAiFormData({ name: '', dailyLimit: 10 }); }}
+              onClick={() => { setIsAiModalOpen(false); resetAiForm(); }}
               className="btn-secondary"
             >
               Cancel
@@ -1042,6 +1078,23 @@ export function AgentCampaignsPage() {
               placeholder="e.g., AI Outreach Campaign"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Channel *
+            </label>
+            <select
+              value={aiEditFormData.channel}
+              onChange={(e) => handleAiEditFormChange('channel', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            >
+              <option value="linkedin">🔗 LinkedIn</option>
+              <option value="email">📧 Email</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              The channel the AI campaign uses to reach leads.
+            </p>
           </div>
 
           <div>
