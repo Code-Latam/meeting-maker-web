@@ -9,22 +9,31 @@ export function AgentCampaignsPage() {
   const { agentId } = useParams();
   const navigate = useNavigate();
   const { showToast } = useUIStore();
-  
+
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('search');
+  const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'search' | 'post'
+
+  // AI Campaign (one per agent, singleton)
+  const [aiCampaign, setAiCampaign] = useState(null);
+  const [aiLoading, setAiLoading] = useState(true);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiFormData, setAiFormData] = useState({
+    name: '',
+    dailyLimit: 10
+  });
+
+  // Search + Post campaigns
   const [searchCampaigns, setSearchCampaigns] = useState([]);
   const [postCampaigns, setPostCampaigns] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('search'); // 'search' or 'post'
+  const [modalType, setModalType] = useState('search'); // 'search' | 'post'
   const [editingCampaign, setEditingCampaign] = useState(null);
-  
+
   // Search Parameters (locations, industries)
   const [locations, setLocations] = useState([]);
   const [industries, setIndustries] = useState([]);
-  
+
   // Search Campaign Form Data
-  // NOTE: activeStart / activeEnd are kept for backend compatibility even
-  // though they are no longer editable in the UI.
   const [searchFormData, setSearchFormData] = useState({
     name: '',
     channel: 'linkedin',
@@ -41,7 +50,7 @@ export function AgentCampaignsPage() {
     locations: [],
     industries: [],
     headcount: [],
-    minConnections: 0   // ← new
+    minConnections: 0
   });
 
   // Post Campaign Form Data
@@ -52,7 +61,10 @@ export function AgentCampaignsPage() {
     dailyLimit: 50
   });
 
-  // Load search parameters
+  // =====================================================
+  // LOADERS
+  // =====================================================
+
   const loadSearchParameters = async () => {
     const result = await campaignsService.getSearchParameters();
     if (result.success) {
@@ -61,7 +73,6 @@ export function AgentCampaignsPage() {
     }
   };
 
-  // Load campaigns
   const loadSearchCampaigns = async () => {
     const result = await campaignsService.getSearchCampaigns(agentId);
     if (result.success) {
@@ -76,20 +87,33 @@ export function AgentCampaignsPage() {
     }
   };
 
+  const loadAiCampaign = async () => {
+    setAiLoading(true);
+    const result = await campaignsService.getAiCampaign(agentId);
+    if (result.success) {
+      setAiCampaign(result.campaign);
+    }
+    setAiLoading(false);
+  };
+
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
       await Promise.all([
         loadSearchParameters(),
         loadSearchCampaigns(),
-        loadPostCampaigns()
+        loadPostCampaigns(),
+        loadAiCampaign()
       ]);
       setLoading(false);
     };
     loadAll();
   }, [agentId]);
 
-  // Handle search form field changes
+  // =====================================================
+  // SEARCH CAMPAIGN HANDLERS
+  // =====================================================
+
   const handleSearchFormChange = (field, value) => {
     setSearchFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -100,9 +124,8 @@ export function AgentCampaignsPage() {
       const index = current.indexOf(locationId);
       if (index > -1) {
         return { ...prev, locations: current.filter(id => id !== locationId) };
-      } else {
-        return { ...prev, locations: [...current, locationId] };
       }
+      return { ...prev, locations: [...current, locationId] };
     });
   };
 
@@ -112,23 +135,21 @@ export function AgentCampaignsPage() {
       const index = current.indexOf(industryId);
       if (index > -1) {
         return { ...prev, industries: current.filter(id => id !== industryId) };
-      } else {
-        return { ...prev, industries: [...current, industryId] };
       }
+      return { ...prev, industries: [...current, industryId] };
     });
   };
 
-      const handleHeadcountToggle = (rangeId) => {
-      setSearchFormData(prev => {
-        const current = prev.headcount;
-        const index = current.indexOf(rangeId);
-        if (index > -1) {
-          return { ...prev, headcount: current.filter(id => id !== rangeId) };
-        } else {
-          return { ...prev, headcount: [...current, rangeId] };
-        }
-      });
-    };
+  const handleHeadcountToggle = (rangeId) => {
+    setSearchFormData(prev => {
+      const current = prev.headcount;
+      const index = current.indexOf(rangeId);
+      if (index > -1) {
+        return { ...prev, headcount: current.filter(id => id !== rangeId) };
+      }
+      return { ...prev, headcount: [...current, rangeId] };
+    });
+  };
 
   const handleOpenToWorkOptionToggle = (option) => {
     setSearchFormData(prev => {
@@ -136,197 +157,115 @@ export function AgentCampaignsPage() {
       const index = current.indexOf(option);
       if (index > -1) {
         return { ...prev, openToWorkOptions: current.filter(o => o !== option) };
-      } else {
-        return { ...prev, openToWorkOptions: [...current, option] };
       }
+      return { ...prev, openToWorkOptions: [...current, option] };
     });
   };
 
-const handleSearchSubmit = async (e) => {
-  e.preventDefault();
-  
-  // =====================================================
-  // STEP 1: Get raw input values
-  // =====================================================
-  
-  const keywordsRaw = searchFormData.keywords.trim();
-  const titlesRaw = searchFormData.titles.trim();
-  
-  // =====================================================
-  // STEP 2: Validate Keywords
-  // =====================================================
-  
-  // 2a: Check if keywords are empty
-  if (!keywordsRaw) {
-    showToast('Please enter at least one keyword', 'error');
-    return;
-  }
-  
-  // 2b: Check for space-separated keywords (multiple words, no commas)
-  if (keywordsRaw && !keywordsRaw.includes(',')) {
-    const words = keywordsRaw.split(/\s+/);
-    if (words.length > 1) {
+  const handleSearchSubmit = async (e) => {
+    e.preventDefault();
+
+    const keywordsRaw = searchFormData.keywords.trim();
+    const titlesRaw = searchFormData.titles.trim();
+
+    if (!keywordsRaw) {
+      showToast('Please enter at least one keyword', 'error');
+      return;
+    }
+
+    if (keywordsRaw && !keywordsRaw.includes(',')) {
+      const words = keywordsRaw.split(/\s+/);
+      if (words.length > 1) {
+        const shouldContinue = window.confirm(
+          `⚠️ Keywords appear to be space-separated.\n\n` +
+          `You entered: "${keywordsRaw}"\n` +
+          `This will be treated as ONE keyword: "${keywordsRaw}"\n\n` +
+          `Suggested format: "${words.join(', ')}"\n\n` +
+          `"OK" to continue anyway\n"Cancel" to fix manually`
+        );
+        if (!shouldContinue) return;
+      }
+    }
+
+    const keywords = keywordsRaw ? keywordsRaw.split(',').map(k => k.trim()).filter(Boolean) : [];
+
+    if (keywords.length === 0) {
+      showToast('Please enter at least one keyword', 'error');
+      return;
+    }
+
+    if (keywords.length > 5) {
+      showToast(`Maximum 5 keywords allowed. You entered ${keywords.length}.`, 'error');
+      return;
+    }
+
+    if (titlesRaw && titlesRaw.includes(',')) {
+      const titleCount = titlesRaw.split(',').filter(t => t.trim()).length;
+      showToast(`⚠️ Only ONE title is allowed. You entered ${titleCount} titles. Please enter a single title.`, 'error');
+      return;
+    }
+
+    if (titlesRaw && titlesRaw.includes(' ')) {
+      const wordCount = titlesRaw.split(/\s+/).length;
       const shouldContinue = window.confirm(
-        `⚠️ Keywords appear to be space-separated.\n\n` +
-        `You entered: "${keywordsRaw}"\n` +
-        `This will be treated as ONE keyword: "${keywordsRaw}"\n\n` +
-        `Suggested format: "${words.join(', ')}"\n\n` +
-        `"OK" to continue anyway\n"Cancel" to fix manually`
+        `⚠️ "${titlesRaw}" contains ${wordCount} words with spaces.\n\n` +
+        `Only ONE title is allowed.\n` +
+        `If you meant to enter multiple titles, only one title is allowed\n\n` +
+        `"OK" to continue with "${titlesRaw}" as a single title\n` +
+        `"Cancel" to fix manually`
       );
       if (!shouldContinue) return;
     }
-  }
-  
-  // 2c: Parse keywords and check count
-  const keywords = keywordsRaw ? keywordsRaw.split(',').map(k => k.trim()).filter(Boolean) : [];
-  
-  if (keywords.length === 0) {
-    showToast('Please enter at least one keyword', 'error');
-    return;
-  }
-  
-  if (keywords.length > 5) {
-    showToast(`Maximum 5 keywords allowed. You entered ${keywords.length}.`, 'error');
-    return;
-  }
-  
-  // =====================================================
-// STEP 3: Validate Titles (SINGLE title only!) - NOW OPTIONAL
-// =====================================================
 
-// 3a: Remove this check - title is now optional
-// if (!titlesRaw) {
-//   showToast('Please enter a title', 'error');
-//   return;
-// }
+    const titles = titlesRaw ? [titlesRaw.trim()] : [];
 
-// 3b: Check if user entered multiple titles (comma-separated) - BLOCK!
-if (titlesRaw && titlesRaw.includes(',')) {
-  const titleCount = titlesRaw.split(',').filter(t => t.trim()).length;
-  showToast(`⚠️ Only ONE title is allowed. You entered ${titleCount} titles. Please enter a single title.`, 'error');
-  return;
-}
-
-// 3c: Check if title has spaces - WARNING (user might be trying to enter multiple titles)
-if (titlesRaw && titlesRaw.includes(' ')) {
-  const wordCount = titlesRaw.split(/\s+/).length;
-  const shouldContinue = window.confirm(
-    `⚠️ "${titlesRaw}" contains ${wordCount} words with spaces.\n\n` +
-    `Only ONE title is allowed.\n` +
-    `If you meant to enter multiple titles, only one title is allowed\n\n` +
-    `"OK" to continue with "${titlesRaw}" as a single title\n` +
-    `"Cancel" to fix manually`
-  );
-  if (!shouldContinue) return;
-}
-
-// 3d: Parse titles (single value) - if empty, it remains empty array
-const titles = titlesRaw ? [titlesRaw.trim()] : [];
-  
-  // =====================================================
-  // STEP 4: Campaign name validation
-  // =====================================================
-  
-  if (!searchFormData.name) {
-    showToast('Campaign name is required', 'error');
-    return;
-  }
-
-  // =====================================================
-  // STEP 5: Daily limit validation
-  // =====================================================
-  
-  const maxLimit = searchFormData.channel === 'email' ? 200 : 30;
-  if (searchFormData.dailyLimit > maxLimit) {
-    showToast(`Daily limit for ${searchFormData.channel} cannot exceed ${maxLimit}`, 'error');
-    return;
-  }
-
-  // =====================================================
-  // STEP 6: Submit campaign
-  // =====================================================
-  
-  const data = {
-    name: searchFormData.name,
-    channel: searchFormData.channel,
-    dailyLimit: searchFormData.dailyLimit,
-    agentId,
-    // NOTE: activeHours is still sent to satisfy backend schema even though
-    // it is no longer exposed in the UI. Values default to 8 → 18.
-    schedule: {
-      activeHours: {
-        start: searchFormData.activeStart,
-        end: searchFormData.activeEnd
-      }
-    },
-    searchCriteria: {
-      keywords,
-      titles,
-      locations: searchFormData.locations,
-      industries: searchFormData.industries,
-      headcount: searchFormData.headcount, 
-      minConnections: searchFormData.minConnections, 
-      connectionDegree: parseInt(searchFormData.connectionDegree),
-      openToWork: searchFormData.openToWork,
-      hiring: searchFormData.hiring,
-      openToWorkOptions: searchFormData.openToWorkOptions
-    },
-    icpCriteria: {
-      minConfidence: searchFormData.minConfidence
-    }
-  };
-
-  const result = await campaignsService.createSearchCampaign(data);
-  if (result.success) {
-    showToast('Campaign created successfully', 'success');
-    setIsModalOpen(false);
-    resetSearchForm();
-    await loadSearchCampaigns();
-  } else {
-    showToast(result.error || 'Failed to create campaign', 'error');
-  }
-};
-
-  // Handle post campaign submit
-  const handlePostSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!postFormData.name) {
+    if (!searchFormData.name) {
       showToast('Campaign name is required', 'error');
       return;
     }
-    
-    if (!postFormData.postUrl) {
-      showToast('Post URL is required', 'error');
-      return;
-    }
-    
-    if (!postFormData.postUrl.includes('linkedin.com')) {
-      showToast('Please enter a valid LinkedIn post URL', 'error');
-      return;
-    }
-    
-    if (postFormData.dailyLimit < 1 || postFormData.dailyLimit > 500) {
-      showToast('Daily limit must be between 1 and 500', 'error');
+
+    const maxLimit = searchFormData.channel === 'email' ? 200 : 30;
+    if (searchFormData.dailyLimit > maxLimit) {
+      showToast(`Daily limit for ${searchFormData.channel} cannot exceed ${maxLimit}`, 'error');
       return;
     }
 
     const data = {
-      name: postFormData.name,
-      channelPreference: postFormData.channelPreference,
-      postUrl: postFormData.postUrl,
-      dailyLimit: postFormData.dailyLimit,
-      agentId
+      name: searchFormData.name,
+      channel: searchFormData.channel,
+      dailyLimit: searchFormData.dailyLimit,
+      agentId,
+      schedule: {
+        activeHours: {
+          start: searchFormData.activeStart,
+          end: searchFormData.activeEnd
+        }
+      },
+      searchCriteria: {
+        keywords,
+        titles,
+        locations: searchFormData.locations,
+        industries: searchFormData.industries,
+        headcount: searchFormData.headcount,
+        minConnections: searchFormData.minConnections,
+        connectionDegree: parseInt(searchFormData.connectionDegree),
+        openToWork: searchFormData.openToWork,
+        hiring: searchFormData.hiring,
+        openToWorkOptions: searchFormData.openToWorkOptions
+      },
+      icpCriteria: {
+        minConfidence: searchFormData.minConfidence
+      }
     };
 
-    const result = await campaignsService.createPostCampaign(data);
+    const result = await campaignsService.createSearchCampaign(data);
     if (result.success) {
-      showToast('Post campaign created successfully', 'success');
+      showToast('Campaign created successfully', 'success');
       setIsModalOpen(false);
-      resetPostForm();
-      await loadPostCampaigns();
+      resetSearchForm();
+      await loadSearchCampaigns();
     } else {
-      showToast(result.error || 'Failed to create post campaign', 'error');
+      showToast(result.error || 'Failed to create campaign', 'error');
     }
   };
 
@@ -351,6 +290,52 @@ const titles = titlesRaw ? [titlesRaw.trim()] : [];
     });
   };
 
+  // =====================================================
+  // POST CAMPAIGN HANDLERS
+  // =====================================================
+
+  const handlePostSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!postFormData.name) {
+      showToast('Campaign name is required', 'error');
+      return;
+    }
+
+    if (!postFormData.postUrl) {
+      showToast('Post URL is required', 'error');
+      return;
+    }
+
+    if (!postFormData.postUrl.includes('linkedin.com')) {
+      showToast('Please enter a valid LinkedIn post URL', 'error');
+      return;
+    }
+
+    if (postFormData.dailyLimit < 1 || postFormData.dailyLimit > 500) {
+      showToast('Daily limit must be between 1 and 500', 'error');
+      return;
+    }
+
+    const data = {
+      name: postFormData.name,
+      channelPreference: postFormData.channelPreference,
+      postUrl: postFormData.postUrl,
+      dailyLimit: postFormData.dailyLimit,
+      agentId
+    };
+
+    const result = await campaignsService.createPostCampaign(data);
+    if (result.success) {
+      showToast('Post campaign created successfully', 'success');
+      setIsModalOpen(false);
+      resetPostForm();
+      await loadPostCampaigns();
+    } else {
+      showToast(result.error || 'Failed to create post campaign', 'error');
+    }
+  };
+
   const resetPostForm = () => {
     setPostFormData({
       name: '',
@@ -360,7 +345,87 @@ const titles = titlesRaw ? [titlesRaw.trim()] : [];
     });
   };
 
-  // Handle campaign actions
+  // =====================================================
+  // AI CAMPAIGN HANDLERS
+  // =====================================================
+
+  const handleAiFormChange = (field, value) => {
+    setAiFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAiCreate = async (e) => {
+    e.preventDefault();
+
+    if (!aiFormData.name?.trim()) {
+      showToast('Campaign name is required', 'error');
+      return;
+    }
+
+    const limit = parseInt(aiFormData.dailyLimit, 10);
+    if (isNaN(limit) || limit < 1 || limit > 30) {
+      showToast('Daily limit must be between 1 and 30', 'error');
+      return;
+    }
+
+    const result = await campaignsService.createAiCampaign({
+      agentId,
+      name: aiFormData.name.trim(),
+      dailyLimit: limit
+    });
+
+    if (result.success) {
+      showToast('AI campaign created', 'success');
+      setIsAiModalOpen(false);
+      setAiFormData({ name: '', dailyLimit: 10 });
+      await loadAiCampaign();
+    } else {
+      showToast(result.error || 'Failed to create AI campaign', 'error');
+    }
+  };
+
+  const handleAiToggle = async () => {
+    if (!aiCampaign) return;
+
+    const newStatus = aiCampaign.status === 'active' ? 'paused' : 'active';
+    const result = await campaignsService.updateAiCampaign(aiCampaign._id, {
+      status: newStatus
+    });
+
+    if (result.success) {
+      showToast(`AI campaign ${newStatus === 'active' ? 'resumed' : 'paused'}`, 'success');
+      setAiCampaign(result.campaign);
+    } else {
+      showToast(result.error || 'Failed to update AI campaign', 'error');
+    }
+  };
+
+  const handleAiDailyLimitSave = async (newLimit) => {
+    if (!aiCampaign) return;
+
+    const limit = parseInt(newLimit, 10);
+    if (isNaN(limit) || limit < 1 || limit > 30) {
+      showToast('Daily limit must be between 1 and 30', 'error');
+      return;
+    }
+
+    if (limit === aiCampaign.dailyLimit) return;
+
+    const result = await campaignsService.updateAiCampaign(aiCampaign._id, {
+      dailyLimit: limit
+    });
+
+    if (result.success) {
+      showToast('Daily limit updated', 'success');
+      setAiCampaign(result.campaign);
+    } else {
+      showToast(result.error || 'Failed to update daily limit', 'error');
+    }
+  };
+
+  // =====================================================
+  // SEARCH + POST TOGGLE / DELETE
+  // =====================================================
+
   const handleToggle = async (campaignId, currentStatus) => {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active';
     const result = await campaignsService.updateSearchCampaign(campaignId, { status: newStatus });
@@ -415,187 +480,292 @@ const titles = titlesRaw ? [titlesRaw.trim()] : [];
     return classes[status] || 'bg-gray-100 text-gray-700';
   };
 
-const renderSearchCampaigns = () => {
-  if (searchCampaigns.length === 0) {
+  // =====================================================
+  // RENDER: AI CAMPAIGN TAB
+  // =====================================================
+
+  const renderAiCampaign = () => {
+    if (aiLoading) {
+      return (
+        <div className="text-center py-12">
+          <LoadingSpinner />
+        </div>
+      );
+    }
+
+    // Empty state — no AI campaign yet
+    if (!aiCampaign) {
+      return (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+          <div className="text-4xl mb-3">🤖</div>
+          <p className="text-gray-600 font-medium mb-1">No AI campaign yet</p>
+          <p className="text-gray-500 text-sm mb-4">
+            AI campaigns run autonomously with a daily lead target. Only one per agent.
+          </p>
+          <button
+            onClick={() => {
+              setAiFormData({ name: 'AI Campaign', dailyLimit: 10 });
+              setIsAiModalOpen(true);
+            }}
+            className="btn-primary text-sm"
+          >
+            + Create AI Campaign
+          </button>
+        </div>
+      );
+    }
+
+    // Populated state
+    const stats = aiCampaign.stats || {};
+    const dailyProcessed = aiCampaign.dailyProcessed || 0;
+    const dailyLimit = aiCampaign.dailyLimit || 30;
+
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-        <div className="text-4xl mb-3">🔍</div>
-        <p className="text-gray-500">No search campaigns yet</p>
-        <button
-          onClick={() => { setModalType('search'); setIsModalOpen(true); }}
-          className="mt-3 btn-primary text-sm"
-        >
-          + Create Campaign
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {searchCampaigns.map((campaign) => {
-        // Format display values
-        const keywords = campaign.searchCriteria?.keywords?.join(', ') || 'Any';
-        const titles = campaign.searchCriteria?.titles?.join(', ') || 'Any';
-        
-        // Map location IDs to names using 'locations' state
-        const locationsDisplay = campaign.searchCriteria?.locations?.length > 0 
-          ? campaign.searchCriteria.locations.map(locId => {
-              const location = locations.find(l => l.id === locId);
-              return location ? (location.title || location.name || locId) : locId;
-            }).join(', ')
-          : 'Any';
-        
-        // Map industry IDs to names using 'industries' state
-        const industriesDisplay = campaign.searchCriteria?.industries?.length > 0
-          ? campaign.searchCriteria.industries.map(indId => {
-              const industry = industries.find(i => i.id === indId);
-              return industry ? (industry.title || industry.name || indId) : indId;
-            }).join(', ')
-          : 'Any';
-        
-        const headcountLabels = {
-          '1': 'Self-employed',
-          '1-10': '1-10',
-          '11-50': '11-50',
-          '51-200': '51-200',
-          '201-500': '201-500',
-          '501-1000': '501-1,000',
-          '1001-5000': '1,001-5,000',
-          '5001-10000': '5,001-10,000',
-          '10001+': '10,001+'
-        };
-        const headcount = campaign.searchCriteria?.headcount?.length > 0
-          ? campaign.searchCriteria.headcount.map(h => headcountLabels[h] || h).join(', ')
-          : 'Any';
-        
-        // ✅ NEW: get minConnections value
-        const minConnections = campaign.searchCriteria?.minConnections || 0;
-
-        const connectionDegree = campaign.searchCriteria?.connectionDegree || 2;
-        const minConfidence = Math.round((campaign.icpCriteria?.minConfidence || 0.6) * 100);
-        const openToWork = campaign.searchCriteria?.openToWork ? '✅ Yes' : '❌ No';
-        const hiring = campaign.searchCriteria?.hiring ? '✅ Yes' : '❌ No';
-        const openToWorkOptions = campaign.searchCriteria?.openToWorkOptions?.length > 0
-          ? campaign.searchCriteria.openToWorkOptions.join(', ')
-          : 'None';
-
-        return (
-          <div key={campaign._id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
-                <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${getStatusClass(campaign.status)}`}>
-                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                </span>
-                <span className="ml-2 text-xs text-gray-500">
-                  {campaign.channel === 'email' ? '📧 Email' : '🔗 LinkedIn'}
-                </span>
-              </div>
-            </div>
-
-            {/* Enhanced Campaign Details */}
-            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-              <div>
-                <span className="text-gray-500">🔑 Keywords:</span>
-                <span className="ml-1 text-gray-700 font-medium">{keywords}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">📍 Location:</span>
-                <span className="ml-1 text-gray-700 font-medium">{locationsDisplay}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">🏢 Industry:</span>
-                <span className="ml-1 text-gray-700 font-medium">{industriesDisplay}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">👥 Headcount:</span>
-                <span className="ml-1 text-gray-700 font-medium">{headcount}</span>
-              </div>
-              {/* ✅ NEW: Display minConnections */}
-              <div>
-                <span className="text-gray-500">🔗 Min Connections:</span>
-                <span className="ml-1 text-gray-700 font-medium">
-                  {minConnections > 0 ? minConnections : 'None'}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-500">🔗 Connection:</span>
-                <span className="ml-1 text-gray-700 font-medium">{connectionDegree}°</span>
-              </div>
-              <div>
-                <span className="text-gray-500">🎯 AI Confidence:</span>
-                <span className="ml-1 text-gray-700 font-medium">{minConfidence}%</span>
-              </div>
-              <div>
-                <span className="text-gray-500">📊 Open to Work:</span>
-                <span className="ml-1 text-gray-700 font-medium">{openToWork}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">🏢 Hiring:</span>
-                <span className="ml-1 text-gray-700 font-medium">{hiring}</span>
-              </div>
-            </div>
-
-            {/* Open to Work Options (if any) */}
-            {campaign.searchCriteria?.openToWork && campaign.searchCriteria?.openToWorkOptions?.length > 0 && (
-              <div className="mt-1 text-xs text-gray-500">
-                <span className="text-gray-400">Open to Work Options:</span>
-                <span className="ml-1 text-gray-600">{openToWorkOptions}</span>
-              </div>
-            )}
-
-            {/* =====================================================
-                Funnel Row — cumulative lead pipeline
-                Found → In DB (skipped) → Qualified → Added
-                ===================================================== */}
-            <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
-                <span title="Raw LinkedIn profiles returned by search (cumulative)">
-                  📊 Found <strong className="text-gray-800">{campaign.stats?.leadsFound || 0}</strong>
-                </span>
-                <span className="text-gray-300">→</span>
-                <span
-                  className="cursor-help"
-                  title="Already existed in Meeting Maker — skipped before AI scoring (cumulative)"
-                >
-                  🔁 In DB <strong className="text-gray-800">{campaign.stats?.leadsAlreadyInDb || 0}</strong>
-                </span>
-                <span className="text-gray-300">→</span>
-                <span title="Passed all filters + AI confidence threshold (cumulative)">
-                  ✅ Qualified <strong className="text-gray-800">{campaign.stats?.leadsQualified || 0}</strong>
-                </span>
-                <span className="text-gray-300">→</span>
-                <span title="Net-new contacts written to Meeting Maker (cumulative)">
-                  ➕ Added <strong className="text-gray-800">{campaign.stats?.leadsAdded || 0}</strong>
-                </span>
-                <span className="ml-auto text-gray-500" title="New contacts added today / daily cap">
-                  📅 {campaign.dailyProcessed || 0} / {campaign.dailyLimit} today
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-3 flex gap-2 justify-end">
-              <button
-                onClick={() => handleToggle(campaign._id, campaign.status)}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {campaign.status === 'active' ? '⏸️ Pause' : campaign.status === 'paused' ? '▶️ Resume' : '✅ Activate'}
-              </button>
-              <button
-                onClick={() => handleDelete(campaign._id)}
-                className="px-3 py-1 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-              >
-                🗑️ Delete
-              </button>
+      <div className="bg-white rounded-lg border-2 border-primary-100 p-5 hover:shadow-md transition-shadow">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              🤖 {aiCampaign.name}
+            </h3>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusClass(aiCampaign.status)}`}>
+                {aiCampaign.status.charAt(0).toUpperCase() + aiCampaign.status.slice(1)}
+              </span>
+              <span className="text-xs text-gray-500">AI-driven campaign</span>
             </div>
           </div>
-        );
-      })}
-    </div>
-  );
-};
+
+          {/* Daily limit editor */}
+          <div className="text-right">
+            <label className="block text-xs text-gray-500 mb-1">Daily Lead Target</label>
+            <div className="flex items-center gap-2 justify-end">
+              <input
+                type="number"
+                min="1"
+                max="30"
+                defaultValue={dailyLimit}
+                onBlur={(e) => handleAiDailyLimitSave(e.target.value)}
+                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-center"
+              />
+              <span className="text-xs text-gray-400">/ day</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="mt-4 border-t border-gray-100 pt-3 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-600">
+            <span title="Raw LinkedIn profiles returned by search (cumulative)">
+              📊 Found <strong className="text-gray-800">{stats.leadsFound || 0}</strong>
+            </span>
+            <span className="text-gray-300">→</span>
+            <span title="Passed AI confidence threshold (cumulative)">
+              ✅ Qualified <strong className="text-gray-800">{stats.leadsQualified || 0}</strong>
+            </span>
+            <span className="text-gray-300">→</span>
+            <span title="Net-new contacts added to Meeting Maker (cumulative)">
+              ➕ Added <strong className="text-gray-800">{stats.leadsAdded || 0}</strong>
+            </span>
+            <span className="ml-auto text-gray-500" title="Leads added today / daily target">
+              📅 {dailyProcessed} / {dailyLimit} today
+            </span>
+          </div>
+        </div>
+
+        {/* Actions — no delete, by design */}
+        <div className="mt-4 flex gap-2 justify-end">
+          <button
+            onClick={handleAiToggle}
+            className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            {aiCampaign.status === 'active' ? '⏸️ Pause' : '▶️ Resume'}
+          </button>
+        </div>
+
+        <p className="mt-3 text-xs text-gray-400 italic">
+          This campaign cannot be deleted. Pause it instead.
+        </p>
+      </div>
+    );
+  };
+
+  // =====================================================
+  // RENDER: SEARCH CAMPAIGN TAB
+  // =====================================================
+
+  const renderSearchCampaigns = () => {
+    if (searchCampaigns.length === 0) {
+      return (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+          <div className="text-4xl mb-3">🔍</div>
+          <p className="text-gray-500">No search campaigns yet</p>
+          <button
+            onClick={() => { setModalType('search'); setIsModalOpen(true); }}
+            className="mt-3 btn-primary text-sm"
+          >
+            + Create Campaign
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {searchCampaigns.map((campaign) => {
+          const keywords = campaign.searchCriteria?.keywords?.join(', ') || 'Any';
+          const titles = campaign.searchCriteria?.titles?.join(', ') || 'Any';
+
+          const locationsDisplay = campaign.searchCriteria?.locations?.length > 0
+            ? campaign.searchCriteria.locations.map(locId => {
+                const location = locations.find(l => l.id === locId);
+                return location ? (location.title || location.name || locId) : locId;
+              }).join(', ')
+            : 'Any';
+
+          const industriesDisplay = campaign.searchCriteria?.industries?.length > 0
+            ? campaign.searchCriteria.industries.map(indId => {
+                const industry = industries.find(i => i.id === indId);
+                return industry ? (industry.title || industry.name || indId) : indId;
+              }).join(', ')
+            : 'Any';
+
+          const headcountLabels = {
+            '1': 'Self-employed',
+            '1-10': '1-10',
+            '11-50': '11-50',
+            '51-200': '51-200',
+            '201-500': '201-500',
+            '501-1000': '501-1,000',
+            '1001-5000': '1,001-5,000',
+            '5001-10000': '5,001-10,000',
+            '10001+': '10,001+'
+          };
+          const headcount = campaign.searchCriteria?.headcount?.length > 0
+            ? campaign.searchCriteria.headcount.map(h => headcountLabels[h] || h).join(', ')
+            : 'Any';
+
+          const minConnections = campaign.searchCriteria?.minConnections || 0;
+          const connectionDegree = campaign.searchCriteria?.connectionDegree || 2;
+          const minConfidence = Math.round((campaign.icpCriteria?.minConfidence || 0.6) * 100);
+          const openToWork = campaign.searchCriteria?.openToWork ? '✅ Yes' : '❌ No';
+          const hiring = campaign.searchCriteria?.hiring ? '✅ Yes' : '❌ No';
+          const openToWorkOptions = campaign.searchCriteria?.openToWorkOptions?.length > 0
+            ? campaign.searchCriteria.openToWorkOptions.join(', ')
+            : 'None';
+
+          return (
+            <div key={campaign._id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
+                  <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${getStatusClass(campaign.status)}`}>
+                    {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                  </span>
+                  <span className="ml-2 text-xs text-gray-500">
+                    {campaign.channel === 'email' ? '📧 Email' : '🔗 LinkedIn'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">🔑 Keywords:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{keywords}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">📍 Location:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{locationsDisplay}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">🏢 Industry:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{industriesDisplay}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">👥 Headcount:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{headcount}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">🔗 Min Connections:</span>
+                  <span className="ml-1 text-gray-700 font-medium">
+                    {minConnections > 0 ? minConnections : 'None'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">🔗 Connection:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{connectionDegree}°</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">🎯 AI Confidence:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{minConfidence}%</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">📊 Open to Work:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{openToWork}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">🏢 Hiring:</span>
+                  <span className="ml-1 text-gray-700 font-medium">{hiring}</span>
+                </div>
+              </div>
+
+              {campaign.searchCriteria?.openToWork && campaign.searchCriteria?.openToWorkOptions?.length > 0 && (
+                <div className="mt-1 text-xs text-gray-500">
+                  <span className="text-gray-400">Open to Work Options:</span>
+                  <span className="ml-1 text-gray-600">{openToWorkOptions}</span>
+                </div>
+              )}
+
+              <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
+                  <span title="Raw LinkedIn profiles returned by search (cumulative)">
+                    📊 Found <strong className="text-gray-800">{campaign.stats?.leadsFound || 0}</strong>
+                  </span>
+                  <span className="text-gray-300">→</span>
+                  <span
+                    className="cursor-help"
+                    title="Already existed in Meeting Maker — skipped before AI scoring (cumulative)"
+                  >
+                    🔁 In DB <strong className="text-gray-800">{campaign.stats?.leadsAlreadyInDb || 0}</strong>
+                  </span>
+                  <span className="text-gray-300">→</span>
+                  <span title="Passed all filters + AI confidence threshold (cumulative)">
+                    ✅ Qualified <strong className="text-gray-800">{campaign.stats?.leadsQualified || 0}</strong>
+                  </span>
+                  <span className="text-gray-300">→</span>
+                  <span title="Net-new contacts written to Meeting Maker (cumulative)">
+                    ➕ Added <strong className="text-gray-800">{campaign.stats?.leadsAdded || 0}</strong>
+                  </span>
+                  <span className="ml-auto text-gray-500" title="New contacts added today / daily cap">
+                    📅 {campaign.dailyProcessed || 0} / {campaign.dailyLimit} today
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex gap-2 justify-end">
+                <button
+                  onClick={() => handleToggle(campaign._id, campaign.status)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {campaign.status === 'active' ? '⏸️ Pause' : campaign.status === 'paused' ? '▶️ Resume' : '✅ Activate'}
+                </button>
+                <button
+                  onClick={() => handleDelete(campaign._id)}
+                  className="px-3 py-1 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // =====================================================
+  // RENDER: POST CAMPAIGN TAB
+  // =====================================================
 
   const renderPostCampaigns = () => {
     if (postCampaigns.length === 0) {
@@ -677,6 +847,12 @@ const renderSearchCampaigns = () => {
     return <LoadingSpinner />;
   }
 
+  // Show the header button only when it makes sense
+  const showHeaderButton =
+    activeTab === 'search' ||
+    activeTab === 'post' ||
+    (activeTab === 'ai' && !aiCampaign);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -690,17 +866,42 @@ const renderSearchCampaigns = () => {
           </button>
           <h2 className="text-xl font-semibold text-gray-800">📊 Lead Generation Campaigns</h2>
         </div>
-        <button
-          onClick={() => { setModalType(activeTab === 'search' ? 'search' : 'post'); setIsModalOpen(true); }}
-          className="btn-primary text-sm"
-        >
-          {activeTab === 'search' ? '+ New Search Campaign' : '+ New Post Campaign'}
-        </button>
+
+        {showHeaderButton && (
+          <button
+            onClick={() => {
+              if (activeTab === 'ai') {
+                setAiFormData({ name: 'AI Campaign', dailyLimit: 10 });
+                setIsAiModalOpen(true);
+              } else {
+                setModalType(activeTab === 'search' ? 'search' : 'post');
+                setIsModalOpen(true);
+              }
+            }}
+            className="btn-primary text-sm"
+          >
+            {activeTab === 'ai'
+              ? '+ New AI Campaign'
+              : activeTab === 'search'
+                ? '+ New Search Campaign'
+                : '+ New Post Campaign'}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <div className="flex gap-0">
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'ai'
+                ? 'text-primary-600 border-b-2 border-primary-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🤖 AI Campaign
+          </button>
           <button
             onClick={() => setActiveTab('search')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -725,7 +926,71 @@ const renderSearchCampaigns = () => {
       </div>
 
       {/* Content */}
-      {activeTab === 'search' ? renderSearchCampaigns() : renderPostCampaigns()}
+      {activeTab === 'ai' && renderAiCampaign()}
+      {activeTab === 'search' && renderSearchCampaigns()}
+      {activeTab === 'post' && renderPostCampaigns()}
+
+      {/* ===================================================== */}
+      {/* AI CAMPAIGN MODAL */}
+      {/* ===================================================== */}
+      <Modal
+        isOpen={isAiModalOpen}
+        onClose={() => { setIsAiModalOpen(false); setAiFormData({ name: '', dailyLimit: 10 }); }}
+        title="Create AI Campaign"
+        maxWidth="md"
+      >
+        <form onSubmit={handleAiCreate} className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            🤖 An AI campaign runs autonomously. It generates leads on its own using the
+            agent's configuration. Only one can exist per agent, and it cannot be deleted.
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Campaign Name *
+            </label>
+            <input
+              type="text"
+              value={aiFormData.name}
+              onChange={(e) => handleAiFormChange('name', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="e.g., AI Outreach Campaign"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Daily Lead Target (1 – 30)
+            </label>
+            <input
+              type="number"
+              value={aiFormData.dailyLimit}
+              onChange={(e) => handleAiFormChange('dailyLimit', e.target.value)}
+              min="1"
+              max="30"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Maximum leads the AI campaign can add to Meeting Maker per day.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="submit" className="flex-1 btn-primary">
+              Create AI Campaign
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsAiModalOpen(false); setAiFormData({ name: '', dailyLimit: 10 }); }}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ===================================================== */}
       {/* SEARCH CAMPAIGN MODAL */}
@@ -737,7 +1002,6 @@ const renderSearchCampaigns = () => {
         maxWidth="lg"
       >
         <form onSubmit={handleSearchSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-          {/* Campaign Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Campaign Name *
@@ -752,7 +1016,6 @@ const renderSearchCampaigns = () => {
             />
           </div>
 
-          {/* Channel */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Channel *
@@ -771,7 +1034,6 @@ const renderSearchCampaigns = () => {
             </select>
           </div>
 
-          {/* Daily Limit */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Daily Lead Limit
@@ -789,11 +1051,6 @@ const renderSearchCampaigns = () => {
             </p>
           </div>
 
-          {/* NOTE: Active Hours fields removed from UI.
-              activeStart / activeEnd still flow into data.schedule.activeHours
-              so the backend schema remains satisfied. */}
-
-          {/* Keywords */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Keywords (max 5)
@@ -811,7 +1068,6 @@ const renderSearchCampaigns = () => {
             </p>
           </div>
 
-          {/* Locations */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Locations
@@ -836,7 +1092,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Select locations to target</p>
           </div>
 
-          {/* Industries */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Industries
@@ -861,7 +1116,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Select industries to target</p>
           </div>
 
-          {/* Headcount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Company Headcount
@@ -895,25 +1149,23 @@ const renderSearchCampaigns = () => {
             </p>
           </div>
 
-          {/* Minimum Connections */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Minimum Connections
-          </label>
-          <input
-            type="number"
-            value={searchFormData.minConnections}
-            onChange={(e) => handleSearchFormChange('minConnections', parseInt(e.target.value) || 0)}
-            min="0"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-            placeholder="e.g., 500"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Only include leads with at least this many connections. Leave 0 for no filter.
-          </p>
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Minimum Connections
+            </label>
+            <input
+              type="number"
+              value={searchFormData.minConnections}
+              onChange={(e) => handleSearchFormChange('minConnections', parseInt(e.target.value) || 0)}
+              min="0"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="e.g., 500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Only include leads with at least this many connections. Leave 0 for no filter.
+            </p>
+          </div>
 
-          {/* Connection Degree */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Connection Degree
@@ -929,7 +1181,6 @@ const renderSearchCampaigns = () => {
             </select>
           </div>
 
-          {/* AI Confidence Threshold */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               AI Confidence Threshold
@@ -954,7 +1205,6 @@ const renderSearchCampaigns = () => {
             </div>
           </div>
 
-          {/* Open to Work */}
           <div className="border border-gray-200 rounded-lg p-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -966,7 +1216,7 @@ const renderSearchCampaigns = () => {
               <span className="text-sm font-medium text-gray-700">🎯 Filter by "Open to Work"</span>
               <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">PREMIUM</span>
             </label>
-            
+
             {searchFormData.openToWork && (
               <div className="mt-3 grid grid-cols-2 gap-2 ml-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 {['Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship', 'Remote', 'Hybrid', 'On-site'].map((option) => (
@@ -985,7 +1235,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Find candidates actively looking for opportunities</p>
           </div>
 
-          {/* Hiring */}
           <div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -1025,7 +1274,6 @@ const renderSearchCampaigns = () => {
         maxWidth="lg"
       >
         <form onSubmit={handlePostSubmit} className="space-y-4">
-          {/* Campaign Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Campaign Name *
@@ -1040,7 +1288,6 @@ const renderSearchCampaigns = () => {
             />
           </div>
 
-          {/* Channel Preference */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Channel Preference *
@@ -1056,7 +1303,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Select which channel to use for leads from this post campaign</p>
           </div>
 
-          {/* LinkedIn Post URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               LinkedIn Post URL *
@@ -1072,7 +1318,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Only public posts. We'll extract all unique commenters.</p>
           </div>
 
-          {/* Daily Limit */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Daily Lead Limit
@@ -1088,7 +1333,6 @@ const renderSearchCampaigns = () => {
             <p className="text-xs text-gray-500 mt-1">Maximum leads to add per day (1-500)</p>
           </div>
 
-          {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-800">💡 How Post Campaigns Work:</p>
             <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">

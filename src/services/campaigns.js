@@ -4,8 +4,7 @@ export const campaignsService = {
   // =====================================================
   // SEARCH CAMPAIGNS (Lead Generation)
   // =====================================================
-  
-  // Get all search campaigns for an agent
+
   async getSearchCampaigns(agentId) {
     try {
       const response = await api.get(`/lead-campaigns/campaigns/agent/${agentId}`);
@@ -18,7 +17,6 @@ export const campaignsService = {
     }
   },
 
-  // Create a search campaign
   async createSearchCampaign(data) {
     try {
       const response = await api.post('/lead-campaigns/campaigns', data);
@@ -31,7 +29,6 @@ export const campaignsService = {
     }
   },
 
-  // Update a search campaign
   async updateSearchCampaign(id, data) {
     try {
       const response = await api.patch(`/lead-campaigns/campaigns/${id}`, data);
@@ -44,7 +41,6 @@ export const campaignsService = {
     }
   },
 
-  // Delete a search campaign
   async deleteSearchCampaign(id) {
     try {
       await api.delete(`/lead-campaigns/campaigns/${id}`);
@@ -60,8 +56,7 @@ export const campaignsService = {
   // =====================================================
   // POST CAMPAIGNS
   // =====================================================
-  
-  // Get all post campaigns for an agent
+
   async getPostCampaigns(agentId) {
     try {
       const response = await api.get(`/lead-campaigns/post-campaigns/agent/${agentId}`);
@@ -74,7 +69,6 @@ export const campaignsService = {
     }
   },
 
-  // Create a post campaign
   async createPostCampaign(data) {
     try {
       const response = await api.post('/lead-campaigns/post-campaigns', data);
@@ -87,7 +81,6 @@ export const campaignsService = {
     }
   },
 
-  // Update a post campaign
   async updatePostCampaign(id, data) {
     try {
       const response = await api.patch(`/lead-campaigns/post-campaigns/${id}`, data);
@@ -100,7 +93,6 @@ export const campaignsService = {
     }
   },
 
-  // Delete a post campaign
   async deletePostCampaign(id) {
     try {
       await api.delete(`/lead-campaigns/post-campaigns/${id}`);
@@ -114,9 +106,51 @@ export const campaignsService = {
   },
 
   // =====================================================
+  // AI CAMPAIGNS (one per agent — cannot be deleted)
+  // =====================================================
+
+  async getAiCampaign(agentId) {
+    try {
+      const response = await api.get(`/lead-campaigns/ai-campaigns/agent/${agentId}`);
+      return { success: true, campaign: response.data.campaign };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to fetch AI campaign'
+      };
+    }
+  },
+
+  async createAiCampaign(data) {
+    try {
+      const response = await api.post('/lead-campaigns/ai-campaigns', data);
+      return { success: true, campaign: response.data.campaign };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to create AI campaign'
+      };
+    }
+  },
+
+  async updateAiCampaign(id, data) {
+    try {
+      const response = await api.patch(`/lead-campaigns/ai-campaigns/${id}`, data);
+      return { success: true, campaign: response.data.campaign };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to update AI campaign'
+      };
+    }
+  },
+
+  // NOTE: No deleteAiCampaign — AI campaigns cannot be deleted by design.
+
+  // =====================================================
   // KEYWORD ENGAGEMENT CAMPAIGNS (Marketing)
   // =====================================================
-  
+
   async getKeywordCampaigns(agentId) {
     try {
       const response = await api.get(`/lead-campaigns/keyword-engagement/agent/${agentId}`);
@@ -168,7 +202,7 @@ export const campaignsService = {
   // =====================================================
   // INFLUENCER ENGAGEMENT CAMPAIGNS (Marketing)
   // =====================================================
-  
+
   async getInfluencerCampaigns(agentId) {
     try {
       const response = await api.get(`/lead-campaigns/influencer-engagement/agent/${agentId}`);
@@ -220,7 +254,7 @@ export const campaignsService = {
   // =====================================================
   // COMMENT REPLY CAMPAIGNS (Marketing)
   // =====================================================
-  
+
   async getCommentReplyCampaigns(agentId) {
     try {
       const response = await api.get(`/lead-campaigns/comment-reply/agent/${agentId}`);
@@ -272,7 +306,7 @@ export const campaignsService = {
   // =====================================================
   // MARKET CONNECTIONS CAMPAIGNS (Message to First Connections)
   // =====================================================
-  
+
   async getMarketConnectionsCampaigns(agentId) {
     try {
       const response = await api.get(`/lead-campaigns/market-connections/agent/${agentId}`);
@@ -321,69 +355,68 @@ export const campaignsService = {
     }
   },
 
-// =====================================================
-// FIND INFLUENCERS (Marketing) lest tet
-// =====================================================
-  
-async findInfluencers(data) {
-  try {
-    console.log('🔍 Finding influencers with data:', data);
-    
-    // Use a longer timeout specifically for this request
-    const response = await api.post('/lead-campaigns/marketing/find-influencers', data, {
-      timeout: 120000 // 120 seconds (2 minutes)
-    });
-    
-    console.log('📥 Response status:', response.status);
-    console.log('📥 Response data:', response.data);
-    
-    // Handle different response formats
-    let influencers = [];
-    if (response.data.influencers && Array.isArray(response.data.influencers)) {
-      influencers = response.data.influencers;
-    } else if (response.data.data && Array.isArray(response.data.data)) {
-      influencers = response.data.data;
-    } else if (Array.isArray(response.data)) {
-      influencers = response.data;
-    } else if (response.data.success && response.data.influencers) {
-      influencers = response.data.influencers;
+  // =====================================================
+  // FIND INFLUENCERS (Marketing)
+  // =====================================================
+
+  async findInfluencers(data) {
+    try {
+      console.log('🔍 Finding influencers with data:', data);
+
+      const response = await api.post('/lead-campaigns/marketing/find-influencers', data, {
+        timeout: 120000 // 120 seconds (2 minutes)
+      });
+
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response data:', response.data);
+
+      let influencers = [];
+      if (response.data.influencers && Array.isArray(response.data.influencers)) {
+        influencers = response.data.influencers;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        influencers = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        influencers = response.data;
+      } else if (response.data.success && response.data.influencers) {
+        influencers = response.data.influencers;
+      }
+
+      console.log('📊 Extracted influencers:', influencers.length);
+
+      return {
+        success: true,
+        influencers: influencers
+      };
+    } catch (error) {
+      console.error('❌ Error finding influencers:', error);
+
+      let errorMessage = 'Failed to find influencers';
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timed out. The search is taking longer than expected. Please try again.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      return {
+        success: false,
+        error: errorMessage
+      };
     }
-    
-    console.log('📊 Extracted influencers:', influencers.length);
-    
-    return { 
-      success: true, 
-      influencers: influencers 
-    };
-  } catch (error) {
-    console.error('❌ Error finding influencers:', error);
-    
-    let errorMessage = 'Failed to find influencers';
-    if (error.code === 'ECONNABORTED') {
-      errorMessage = 'Request timed out. The search is taking longer than expected. Please try again.';
-    } else if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    
-    return {
-      success: false,
-      error: errorMessage
-    };
-  }
-},
+  },
+
   // =====================================================
   // SEARCH PARAMETERS (Locations, Industries)
   // =====================================================
-  
+
   async getSearchParameters() {
     try {
       const response = await api.get('/lead-campaigns/search-parameters');
-      return { 
-        success: true, 
+      return {
+        success: true,
         locations: response.data.locations || [],
         industries: response.data.industries || []
       };
