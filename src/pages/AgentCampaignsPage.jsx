@@ -17,7 +17,12 @@ export function AgentCampaignsPage() {
   const [aiCampaign, setAiCampaign] = useState(null);
   const [aiLoading, setAiLoading] = useState(true);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isAiEditModalOpen, setIsAiEditModalOpen] = useState(false);
   const [aiFormData, setAiFormData] = useState({
+    name: '',
+    dailyLimit: 10
+  });
+  const [aiEditFormData, setAiEditFormData] = useState({
     name: '',
     dailyLimit: 10
   });
@@ -353,6 +358,10 @@ export function AgentCampaignsPage() {
     setAiFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAiEditFormChange = (field, value) => {
+    setAiEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleAiCreate = async (e) => {
     e.preventDefault();
 
@@ -383,6 +392,52 @@ export function AgentCampaignsPage() {
     }
   };
 
+  const handleAiEditOpen = () => {
+    if (!aiCampaign) return;
+    setAiEditFormData({
+      name: aiCampaign.name,
+      dailyLimit: aiCampaign.dailyLimit
+    });
+    setIsAiEditModalOpen(true);
+  };
+
+  const handleAiEditSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!aiCampaign) return;
+
+    const trimmedName = aiEditFormData.name?.trim();
+    if (!trimmedName) {
+      showToast('Campaign name is required', 'error');
+      return;
+    }
+
+    const limit = parseInt(aiEditFormData.dailyLimit, 10);
+    if (isNaN(limit) || limit < 1 || limit > 30) {
+      showToast('Daily limit must be between 1 and 30', 'error');
+      return;
+    }
+
+    // If nothing changed, just close the modal
+    if (trimmedName === aiCampaign.name && limit === aiCampaign.dailyLimit) {
+      setIsAiEditModalOpen(false);
+      return;
+    }
+
+    const result = await campaignsService.updateAiCampaign(aiCampaign._id, {
+      name: trimmedName,
+      dailyLimit: limit
+    });
+
+    if (result.success) {
+      showToast('AI campaign updated', 'success');
+      setIsAiEditModalOpen(false);
+      setAiCampaign(result.campaign);
+    } else {
+      showToast(result.error || 'Failed to update AI campaign', 'error');
+    }
+  };
+
   const handleAiToggle = async () => {
     if (!aiCampaign) return;
 
@@ -396,29 +451,6 @@ export function AgentCampaignsPage() {
       setAiCampaign(result.campaign);
     } else {
       showToast(result.error || 'Failed to update AI campaign', 'error');
-    }
-  };
-
-  const handleAiDailyLimitSave = async (newLimit) => {
-    if (!aiCampaign) return;
-
-    const limit = parseInt(newLimit, 10);
-    if (isNaN(limit) || limit < 1 || limit > 30) {
-      showToast('Daily limit must be between 1 and 30', 'error');
-      return;
-    }
-
-    if (limit === aiCampaign.dailyLimit) return;
-
-    const result = await campaignsService.updateAiCampaign(aiCampaign._id, {
-      dailyLimit: limit
-    });
-
-    if (result.success) {
-      showToast('Daily limit updated', 'success');
-      setAiCampaign(result.campaign);
-    } else {
-      showToast(result.error || 'Failed to update daily limit', 'error');
     }
   };
 
@@ -536,20 +568,10 @@ export function AgentCampaignsPage() {
             </div>
           </div>
 
-          {/* Daily limit editor */}
           <div className="text-right">
-            <label className="block text-xs text-gray-500 mb-1">Daily Lead Target</label>
-            <div className="flex items-center gap-2 justify-end">
-              <input
-                type="number"
-                min="1"
-                max="30"
-                defaultValue={dailyLimit}
-                onBlur={(e) => handleAiDailyLimitSave(e.target.value)}
-                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-center"
-              />
-              <span className="text-xs text-gray-400">/ day</span>
-            </div>
+            <p className="text-xs text-gray-500 mb-0.5">Daily Lead Target</p>
+            <p className="text-lg font-semibold text-gray-800">{dailyLimit}</p>
+            <p className="text-xs text-gray-400">leads / day</p>
           </div>
         </div>
 
@@ -575,6 +597,12 @@ export function AgentCampaignsPage() {
 
         {/* Actions — no delete, by design */}
         <div className="mt-4 flex gap-2 justify-end">
+          <button
+            onClick={handleAiEditOpen}
+            className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            ✏️ Edit
+          </button>
           <button
             onClick={handleAiToggle}
             className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -931,7 +959,7 @@ export function AgentCampaignsPage() {
       {activeTab === 'post' && renderPostCampaigns()}
 
       {/* ===================================================== */}
-      {/* AI CAMPAIGN MODAL */}
+      {/* AI CAMPAIGN — CREATE MODAL */}
       {/* ===================================================== */}
       <Modal
         isOpen={isAiModalOpen}
@@ -984,6 +1012,63 @@ export function AgentCampaignsPage() {
             <button
               type="button"
               onClick={() => { setIsAiModalOpen(false); setAiFormData({ name: '', dailyLimit: 10 }); }}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ===================================================== */}
+      {/* AI CAMPAIGN — EDIT MODAL */}
+      {/* ===================================================== */}
+      <Modal
+        isOpen={isAiEditModalOpen}
+        onClose={() => setIsAiEditModalOpen(false)}
+        title="Edit AI Campaign"
+        maxWidth="md"
+      >
+        <form onSubmit={handleAiEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Campaign Name *
+            </label>
+            <input
+              type="text"
+              value={aiEditFormData.name}
+              onChange={(e) => handleAiEditFormChange('name', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="e.g., AI Outreach Campaign"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Daily Lead Target (1 – 30)
+            </label>
+            <input
+              type="number"
+              value={aiEditFormData.dailyLimit}
+              onChange={(e) => handleAiEditFormChange('dailyLimit', e.target.value)}
+              min="1"
+              max="30"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Maximum leads the AI campaign can add to Meeting Maker per day.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="submit" className="flex-1 btn-primary">
+              Save Changes
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAiEditModalOpen(false)}
               className="btn-secondary"
             >
               Cancel
