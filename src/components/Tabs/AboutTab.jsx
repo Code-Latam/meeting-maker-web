@@ -123,11 +123,11 @@ export function AboutTab() {
     },
     {
       title: 'How to setup your Meeting Maker agents',
-      url: 'https://www.youtube.com/watch?v=I_hL50OgPt8'
+      url: 'https://www.youtube.com/watch?v=_DDo2W2iTto'
     },
     {
       title: 'How to setup your outreach campaigns',
-      url: 'https://www.youtube.com/watch?v=XrD2feppuzw'
+      url: 'https://www.youtube.com/watch?v=ZWfAKzQZNXU'
     },
     {
       title: 'How to setup you marketing campaigns',
