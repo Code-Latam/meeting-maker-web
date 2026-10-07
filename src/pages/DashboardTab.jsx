@@ -48,6 +48,10 @@ export function DashboardTab() {
       description: 'Number of active ongoing conversations.',
       advice: '💡 If below target, ramp up outreach. If stuck, focus on closing or moving leads forward.',
     },
+    pausedConversations: {
+      description: 'Conversations currently on hold (lifecycle state = paused).',
+      advice: '💡 A high paused count means leads are stalling. Review paused threads and either resume or close them.',
+    },
     invToConnRate: {
       description: 'Percentage of invitations that convert to connections.',
       advice: '💡 Aim for 25%. Optimise your profile, refine targeting, and improve request personalisation.',
@@ -73,6 +77,7 @@ export function DashboardTab() {
     invitations: 0,
     connections: 0,
     inConversation: 0,
+    pausedConversations: 0,
     invitationToConnectionRate: 0,
     invitationToConversionRate: 0,
     connectionToConversionRate: 0,
@@ -83,6 +88,7 @@ export function DashboardTab() {
     emailsSent: 0,
     emailReplied: 0,
     emailInConversation: 0,
+    emailPausedConversations: 0,
     replyRate: 0,
     replyToConversionRate: 0,
     emailToConversionRate: 0,
@@ -223,6 +229,7 @@ export function DashboardTab() {
           invitations,
           connections,
           inConversation,
+          pausedConversations,
           invitationToConnectionRate,
           invitationToConversionRate,
           connectionToConversionRate,
@@ -232,6 +239,7 @@ export function DashboardTab() {
           fetchMetric('invitations_sent', selectedAgentId, timeframe),
           fetchMetric('connections', selectedAgentId, timeframe),
           fetchMetric('in_conversation', selectedAgentId, timeframe),
+          fetchMetric('paused_conversations', selectedAgentId, timeframe),
           fetchMetric('invitation_to_connection_rate', selectedAgentId, timeframe),
           fetchMetric('invitation_to_conversion_rate', selectedAgentId, timeframe),
           fetchMetric('connection_to_conversion_rate', selectedAgentId, timeframe),
@@ -243,6 +251,7 @@ export function DashboardTab() {
           invitations,
           connections,
           inConversation,
+          pausedConversations,
           invitationToConnectionRate,
           invitationToConversionRate,
           connectionToConversionRate,
@@ -265,6 +274,7 @@ export function DashboardTab() {
           emailsSent,
           emailReplied,
           emailInConversation,
+          emailPausedConversations,
           replyRate,
           replyToConversionRate,
           emailToConversionRate,
@@ -275,6 +285,7 @@ export function DashboardTab() {
           fetchMetric('emails_sent', selectedAgentId, timeframe),
           fetchMetric('email_replied', selectedAgentId, timeframe),
           fetchMetric('email_in_conversation', selectedAgentId, timeframe),
+          fetchMetric('email_paused_conversations', selectedAgentId, timeframe),
           fetchMetric('email_reply_rate', selectedAgentId, timeframe),
           fetchMetric('email_reply_to_conversion_rate', selectedAgentId, timeframe),
           fetchMetric('email_to_conversion_rate', selectedAgentId, timeframe),
@@ -287,6 +298,7 @@ export function DashboardTab() {
           emailsSent,
           emailReplied,
           emailInConversation,
+          emailPausedConversations,
           replyRate,
           replyToConversionRate,
           emailToConversionRate,
@@ -784,6 +796,16 @@ export function DashboardTab() {
               metricKey: 'inConversation',
             });
 
+            cardConfigs.push({
+            label: 'Paused Conversations',
+            value: linkedInMetrics.pausedConversations,
+            total: undefined,
+            target: undefined,            // no target – it's a neutral state count
+            isRate: false,
+            isAbsolute: true,
+            metricKey: 'pausedConversations',
+          });
+
             if (!isCrs) {
               cardConfigs.push({
                 label: 'Invitation → Connection Rate',
@@ -868,6 +890,7 @@ export function DashboardTab() {
               { label: 'Emails Sent', value: emailMetrics.emailsSent },
               { label: 'Replied', value: emailMetrics.emailReplied },
               { label: 'In Conversation', value: emailMetrics.emailInConversation },
+              { label: 'Paused Conversations', value: emailMetrics.emailPausedConversations },
             ]}
           />
           <KPIGrid
