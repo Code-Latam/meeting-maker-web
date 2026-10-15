@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { crmService } from '../../services/crm';
 import { useUIStore } from '../../store';
@@ -5,6 +6,7 @@ import { LoadingSpinner } from '../Common/LoadingSpinner';
 import DealModal from './DealModal';
 import CreateDealModal from './CreateDealModal';
 import ManageTypesModal from './ManageTypesModal';
+import { ActivityDetailModal } from '../Activity/ActivityDetailModal'; 
 
 const stageConfig = {
   lead: { label: 'Lead', color: '#2563eb', order: 0 },
@@ -26,6 +28,9 @@ export default function DealsBoard() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isTypesModalOpen, setIsTypesModalOpen] = useState(false);
+  // ← NEW: state for the person-details modal
+  const [selectedPersonActivity, setSelectedPersonActivity] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Load deals
   const loadDeals = useCallback(async () => {
@@ -57,7 +62,7 @@ export default function DealsBoard() {
   const handleMoveDeal = async (e, dealId, newStage) => {
     e.stopPropagation();
     e.preventDefault();
-    
+
     let currentDeal = null;
     let currentStage = null;
     for (const stage of stageOrder) {
@@ -83,7 +88,7 @@ export default function DealsBoard() {
         showToast('🔒 Cannot move this deal. The commission has been paid and the deal is locked.', 'error');
         return;
       }
-      
+
       const commissionStatus = currentDeal.commissionStatus || 'pending';
       const confirmMove = window.confirm(
         `⚠️ This deal is currently in "Closed Won" with a ${commissionStatus} commission.\n\n` +
@@ -115,6 +120,48 @@ export default function DealsBoard() {
   const handleEditDeal = (deal) => {
     setSelectedDeal(deal);
     setIsEditModalOpen(true);
+  };
+
+  // ← NEW: Handle view person details (opens ActivityDetailModal)
+  const handleViewDetails = (e, deal) => {
+    e.stopPropagation();   // don't trigger the card's edit onClick
+    e.preventDefault();
+
+    const p = deal.personId;
+    const personId = p?._id || p?.id || p;   // works if populated object OR raw id string
+
+    if (!personId) {
+      showToast('No person linked to this deal', 'error');
+      return;
+    }
+
+    const firstName = p?.firstName || '';
+    const lastName  = p?.lastName  || '';
+    const fullName  = p?.fullName || `${firstName} ${lastName}`.trim() || 'Unknown';
+
+    // Build an activity-like object that ActivityDetailModal understands.
+    // The modal re-fetches the full person via crmService.getPerson(personId),
+    // so we only need to seed it with the essentials.
+    const activity = {
+      personId,
+      person: typeof p === 'object' ? p : undefined,
+
+      personName: fullName,
+      personTitle: p?.title || '',
+      personCompany: p?.companyName || deal.companyId?.name || '',
+
+      personType: p?.personType || 'prospect',
+      assignedAgentId: p?.assignedAgentId || null,
+      groupId: p?.groupId || null,
+      group: p?.group || null,
+      channelPreference: p?.channelPreference || 'linkedin',
+
+      linkedinPublicId: p?.linkedinPublicId || '',
+      channel: 'linkedin',
+    };
+
+    setSelectedPersonActivity(activity);
+    setIsDetailModalOpen(true);
   };
 
   // Handle save edit
@@ -272,9 +319,20 @@ export default function DealsBoard() {
         {pendingAction && (
           <div className="text-xs sm:text-sm text-gray-500 mt-1">📌 {pendingAction.description}</div>
         )}
+
+        {/* ← NEW: Details button added next to the move buttons */}
         <div className="mt-2 pt-2 border-t border-gray-100 flex gap-1" onClick={(e) => e.stopPropagation()}>
           {getMoveButtons(stageKey, deal._id)}
+          <button
+            type="button"
+            onClick={(e) => handleViewDetails(e, deal)}
+            className="px-2 py-1 text-xs sm:text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors cursor-pointer min-h-[36px] whitespace-nowrap"
+            title="View person details"
+          >
+            📋 Details
+          </button>
         </div>
+
         {locked && (
           <div className="text-xs text-red-500 mt-1">🔒 Locked (commission paid)</div>
         )}
@@ -420,6 +478,16 @@ export default function DealsBoard() {
         onClose={() => setIsTypesModalOpen(false)}
         onTypesChange={loadDealTypes}
         onDealsRefresh={loadDeals}
+      />
+
+      {/* ← NEW: Person details modal (opens when 📋 Details is clicked) */}
+      <ActivityDetailModal
+        isOpen={isDetailModalOpen}
+        activity={selectedPersonActivity}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedPersonActivity(null);
+        }}
       />
 
       <style>{`

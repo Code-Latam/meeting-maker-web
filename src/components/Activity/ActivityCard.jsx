@@ -48,6 +48,7 @@ export function ActivityCard({ activity, onClick }) {
       'connected': 'Connected',
       'pending-connection': 'Pending Connection',
       'in-conversation': 'In Conversation',
+      'in-conversation-ignoring-limits': 'In Coversation Ignoring Limits',
       'paused': 'Paused',
       'converted': 'Converted',
       'irrelevant': 'Irrelevant',
