@@ -170,7 +170,7 @@ export function DesktopSidebar() {
       console.log('📝 Direct login - targetClientId:', targetClientId);
     }
     
-    if (!targetClientId) {
+   if (!targetClientId || targetClientId === "undefined") {
       try {
         const storedClient = localStorage.getItem('client');
         if (storedClient) {
@@ -182,7 +182,8 @@ export function DesktopSidebar() {
       }
     }
     
-    if (!targetClientId) {
+    if (!targetClientId || targetClientId === "undefined") {
+
       setLinkError('Unable to determine client. Please refresh and try again.');
       return;
     }
@@ -256,7 +257,7 @@ export function DesktopSidebar() {
       console.log('📝 Direct login - targetClientId:', targetClientId);
     }
     
-    if (!targetClientId) {
+    if (!targetClientId || targetClientId === "undefined") {
       try {
         const storedClient = localStorage.getItem('client');
         if (storedClient) {
@@ -268,7 +269,8 @@ export function DesktopSidebar() {
       }
     }
     
-    if (!targetClientId) {
+    if (!targetClientId || targetClientId === "undefined") {
+
       setLinkError('Unable to determine client. Please refresh and try again.');
       return;
     }
