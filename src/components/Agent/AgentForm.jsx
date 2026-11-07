@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAgentStore } from '../../store/agentStore';
-import { useUIStore, useAuthStore, useAppStore } from '../../store';
+import { useUIStore } from '../../store';
+import { api } from '../../services/api';
 
 export function AgentForm({ agent, onClose, onSuccess }) {
   const { createAgent, updateAgent, categories, fetchCategories } = useAgentStore();
   const { showToast } = useUIStore();
-  const { client } = useAuthStore();
-  const { activeClientId } = useAppStore();
-
-  const clientId = activeClientId || client?.id;
-
-  console.log('🔍 [AgentForm] clientId:', clientId);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
@@ -22,8 +17,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     maxMessagesPerDay: 0,
     maxConnectionsPerHour: 5,
     maxMessagesPerHour: 15,
-    conversationMode: 'until_meeting',   // ✅ NEW
-    maxOutboundMessages: 0               // ✅ NEW
+    conversationMode: 'until_meeting',
+    maxOutboundMessages: 0,
   };
 
   const [formData, setFormData] = useState({
@@ -38,13 +33,13 @@ export function AgentForm({ agent, onClose, onSuccess }) {
     primaryGoal: {
       type: '',
       label: '',
-      fulfillmentLink: ''
+      fulfillmentLink: '',
     },
     services: [],
     dos: [],
     donts: [],
     fallbackGoals: [],
-    channelLimits: [{ ...defaultChannelLimit }]
+    channelLimits: [{ ...defaultChannelLimit }],
   });
 
   useEffect(() => {
@@ -59,14 +54,16 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         maxFollowUps: agent.maxFollowUps || 3,
         followUpDays: agent.followUpDays || 2,
         emailSignature: agent.emailSignature || '',
-        primaryGoal: agent.primaryGoal || { type: '', label: '', fulfillmentLink: '' },
+        primaryGoal:
+          agent.primaryGoal || { type: '', label: '', fulfillmentLink: '' },
         services: agent.services || [],
         dos: agent.dos || [],
         donts: agent.donts || [],
         fallbackGoals: agent.fallbackGoals || [],
-        channelLimits: (agent.channelLimits && agent.channelLimits.length > 0
-          ? agent.channelLimits
-          : [{ ...defaultChannelLimit }]
+        channelLimits: (
+          agent.channelLimits && agent.channelLimits.length > 0
+            ? agent.channelLimits
+            : [{ ...defaultChannelLimit }]
         ).map((cl) => ({
           ...cl,
           conversationMode: cl.conversationMode || 'until_meeting',
@@ -75,8 +72,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           maxConnectionsPerHour:
             typeof cl.maxConnectionsPerHour === 'number' ? cl.maxConnectionsPerHour : 5,
           maxMessagesPerHour:
-            typeof cl.maxMessagesPerHour === 'number' ? cl.maxMessagesPerHour : 15
-        }))
+            typeof cl.maxMessagesPerHour === 'number' ? cl.maxMessagesPerHour : 15,
+        })),
       });
     }
   }, [agent]);
@@ -97,7 +94,6 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       return;
     }
 
-    // ✅ NEW: validate "limited" mode has a positive cap
     for (const [index, limit] of formData.channelLimits.entries()) {
       if (limit.conversationMode === 'limited') {
         const n = Number(limit.maxOutboundMessages);
@@ -127,226 +123,98 @@ export function AgentForm({ agent, onClose, onSuccess }) {
   };
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handlePrimaryGoalChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      primaryGoal: { ...prev.primaryGoal, [field]: value }
+      primaryGoal: { ...prev.primaryGoal, [field]: value },
     }));
   };
 
   const addStringField = (field, value = '') => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: [...prev[field], value]
-    }));
+    setFormData((prev) => ({ ...prev, [field]: [...prev[field], value] }));
   };
 
   const removeStringField = (field, index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].filter((_, i) => i !== index)
-    }));
-  };
-
-  const setStringField = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: [value]
+      [field]: prev[field].filter((_, i) => i !== index),
     }));
   };
 
   const addChannelLimit = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      channelLimits: [...prev.channelLimits, { ...defaultChannelLimit }]
+      channelLimits: [...prev.channelLimits, { ...defaultChannelLimit }],
     }));
   };
 
   const removeChannelLimit = (index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      channelLimits: prev.channelLimits.filter((_, i) => i !== index)
+      channelLimits: prev.channelLimits.filter((_, i) => i !== index),
     }));
   };
 
   const updateChannelLimit = (index, field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       channelLimits: prev.channelLimits.map((cl, i) =>
         i === index ? { ...cl, [field]: value } : cl
-      )
+      ),
     }));
   };
 
-  // Generate Persona - Uses client-specific website data from localStorage
+  // Generate Persona — server reads company profile from DB
   const handleGeneratePersona = async () => {
-    console.log('🔄 [AgentForm] handleGeneratePersona called');
-
     if (!formData.role) {
       showToast('Please select a role first', 'error');
       return;
     }
 
-    // Get website data from localStorage using client ID
-    let websiteData = null;
-    if (clientId) {
-      const key = `agentWebsiteData_${clientId}`;
-      console.log(`🔑 [AgentForm] Looking for key: "${key}"`);
-      const savedWebsiteData = localStorage.getItem(key);
-      console.log(`📦 [AgentForm] Raw data from localStorage:`, savedWebsiteData);
-      if (savedWebsiteData) {
-        try {
-          websiteData = JSON.parse(savedWebsiteData);
-          console.log('✅ [AgentForm] Parsed website data:', websiteData);
-        } catch (e) {
-          console.error('❌ [AgentForm] Error loading website data:', e);
-        }
-      }
-    }
-
-    if (!websiteData) {
-      console.log('❌ [AgentForm] No website data found');
-      showToast('Please add company information first using the "Add Company Info" button on the main page', 'info');
-      return;
-    }
-
-    console.log('✅ [AgentForm] Website data found, generating persona...');
-
     setIsGeneratingPersona(true);
     try {
-      const token = localStorage.getItem('jwt');
+      const res = await api.post('/agents/generate-persona', { role: formData.role });
 
-      const cleanWebsiteData = {
-        aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
-        businessServices: websiteData.data?.businessServices || websiteData.services || '',
-        title: '',
-        content: '',
-        url: '',
-        normalizedUrl: '',
-        status: 'manual',
-        _id: null,
-        lastFetchedAt: null,
-      };
-
-      if (!cleanWebsiteData.aiDescription && websiteData.data?.content) {
-        cleanWebsiteData.aiDescription = websiteData.data.content;
-      }
-
-      console.log('📤 [AgentForm] Sending clean data:', cleanWebsiteData);
-
-      const response = await fetch('https://api.meetingmaker.tech/agents/generate-persona', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          role: formData.role,
-          websiteData: cleanWebsiteData
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to generate persona');
-      }
-
-      if (data.success && data.persona) {
-        handleChange('persona', data.persona);
+      if (res.data?.success && res.data?.persona) {
+        handleChange('persona', res.data.persona);
         showToast('✅ Persona generated successfully!', 'success');
       } else {
-        throw new Error(data.message || 'Failed to generate persona');
+        throw new Error(res.data?.message || 'Failed to generate persona');
       }
     } catch (err) {
-      console.error('❌ [AgentForm] Error generating persona:', err);
-      showToast(err.message || 'Failed to generate persona', 'error');
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to generate persona';
+      showToast(msg, 'error');
     } finally {
       setIsGeneratingPersona(false);
     }
   };
 
-  // Generate Services - Uses client-specific website data from localStorage
+  // Generate Services — server reads company profile from DB, returns array
   const handleGenerateServices = async () => {
-    console.log('🔄 [AgentForm] handleGenerateServices called');
-
-    // Get website data from localStorage using client ID
-    let websiteData = null;
-    if (clientId) {
-      const key = `agentWebsiteData_${clientId}`;
-      console.log(`🔑 [AgentForm] Looking for key: "${key}"`);
-      const savedWebsiteData = localStorage.getItem(key);
-      console.log(`📦 [AgentForm] Raw data from localStorage:`, savedWebsiteData);
-      if (savedWebsiteData) {
-        try {
-          websiteData = JSON.parse(savedWebsiteData);
-          console.log('✅ [AgentForm] Parsed website data:', websiteData);
-        } catch (e) {
-          console.error('❌ [AgentForm] Error loading website data:', e);
-        }
-      }
-    }
-
-    if (!websiteData) {
-      console.log('❌ [AgentForm] No website data found');
-      showToast('Please add company information first using the "Add Company Info" button on the main page', 'info');
-      return;
-    }
-
-    console.log('✅ [AgentForm] Website data found, generating services...');
-
     setIsGeneratingServices(true);
     try {
-      const token = localStorage.getItem('jwt');
+      const res = await api.post('/agents/generate-services', {});
 
-      const cleanWebsiteData = {
-        aiDescription: websiteData.data?.aiDescription || websiteData.description || '',
-        businessServices: websiteData.data?.businessServices || websiteData.services || '',
-        title: '',
-        content: '',
-        url: '',
-        normalizedUrl: '',
-        status: 'manual',
-        _id: null,
-        lastFetchedAt: null,
-      };
-
-      if (!cleanWebsiteData.aiDescription && websiteData.data?.content) {
-        cleanWebsiteData.aiDescription = websiteData.data.content;
-      }
-
-      console.log('📤 [AgentForm] Sending clean data for services:', cleanWebsiteData);
-
-      const response = await fetch('https://api.meetingmaker.tech/agents/generate-services', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          websiteData: cleanWebsiteData
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to generate services');
-      }
-
-      if (data.success && data.services) {
-        const servicesText = data.services;
-        setStringField('services', servicesText);
+      if (res.data?.success && Array.isArray(res.data?.services)) {
+        handleChange('services', res.data.services);
         showToast('✅ Services generated successfully!', 'success');
       } else {
-        throw new Error(data.message || 'Failed to generate services');
+        throw new Error(res.data?.message || 'Failed to generate services');
       }
     } catch (err) {
-      console.error('❌ [AgentForm] Error generating services:', err);
-      showToast(err.message || 'Failed to generate services', 'error');
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to generate services';
+      showToast(msg, 'error');
     } finally {
       setIsGeneratingServices(false);
     }
@@ -354,11 +222,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Agent Name *
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name *</label>
         <input
           type="text"
           value={formData.name}
@@ -370,9 +235,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Role *
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
         <select
           value={formData.role}
           onChange={(e) => handleChange('role', e.target.value)}
@@ -388,7 +251,6 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         </select>
       </div>
 
-      {/* Generation Buttons */}
       <div className="space-y-2">
         <div className="flex gap-2">
           <button
@@ -413,11 +275,8 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         </small>
       </div>
 
-      {/* Persona */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Persona *
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Persona *</label>
         <textarea
           value={formData.persona}
           onChange={(e) => handleChange('persona', e.target.value)}
@@ -428,7 +287,6 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         />
       </div>
 
-      {/* Services */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-700">Services</label>
@@ -463,11 +321,12 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           </div>
         ))}
         {formData.services.length === 0 && (
-          <p className="text-sm text-gray-400">No services added yet. Click "+ Add Service" or use "Generate Services".</p>
+          <p className="text-sm text-gray-400">
+            No services added yet. Click "+ Add Service" or use "Generate Services".
+          </p>
         )}
       </div>
 
-      {/* Active toggle */}
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
           <input
@@ -481,9 +340,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Tone
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Tone</label>
         <select
           value={formData.tone}
           onChange={(e) => handleChange('tone', e.target.value)}
@@ -591,186 +448,177 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         </p>
       </div>
 
-     {/* ============================================================
-    Channel Limits (with per-channel conversation strategy)
-   ============================================================ */}
-<div>
-  <div className="flex items-center justify-between mb-2">
-    <label className="text-sm font-medium text-gray-700">Channel Limits</label>
-    <button
-      type="button"
-      onClick={addChannelLimit}
-      className="text-sm text-primary-600 hover:text-primary-700"
-    >
-      + Add
-    </button>
-  </div>
-
-  <p className="text-xs text-gray-500 mb-3">
-    Rate limits protect your account from being flagged. The <strong>conversation
-    strategy</strong> controls how far the agent carries each conversation.
-  </p>
-
-  {formData.channelLimits.map((limit, index) => (
-    <div
-      key={index}
-      className="border border-gray-200 rounded-lg p-4 mb-3 space-y-4 bg-gray-50"
-    >
-      {/* ── Channel selector + remove ─────────────────────── */}
-      <div className="flex gap-2 items-center">
-        <div className="flex-1">
-          <label className="block text-xs font-semibold text-gray-700 mb-1">
-            Channel
-          </label>
-          <select
-            value={limit.channel}
-            onChange={(e) => updateChannelLimit(index, 'channel', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700">Channel Limits</label>
+          <button
+            type="button"
+            onClick={addChannelLimit}
+            className="text-sm text-primary-600 hover:text-primary-700"
           >
-            <option value="linkedIn">LinkedIn</option>
-            <option value="email">Email</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="sms">SMS</option>
-          </select>
-        </div>
-        <button
-          type="button"
-          onClick={() => removeChannelLimit(index)}
-          className="mt-5 px-3 py-2 text-gray-400 hover:text-red-500"
-          title="Remove this channel"
-        >
-          ✕
-        </button>
-      </div>
-
-     {/* ── Rate limits (grouped with heading) ────────────── */}
-<div>
-  <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-    Daily Rate Limits
-  </div>
-
-  <div className="grid grid-cols-2 gap-3">
-    {/* Daily connections */}
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">
-        Max Connections / Day
-      </label>
-      <input
-        type="number"
-        value={limit.maxConnectionsPerDay}
-        onChange={(e) =>
-          updateChannelLimit(index, 'maxConnectionsPerDay', parseInt(e.target.value) || 0)
-        }
-        min="0"
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
-      />
-      <p className="text-[11px] text-gray-400 mt-0.5">
-        Invites sent per day
-      </p>
-    </div>
-
-    {/* Daily messages */}
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">
-        Max Messages / Day
-      </label>
-      <input
-        type="number"
-        value={limit.maxMessagesPerDay}
-        onChange={(e) =>
-          updateChannelLimit(index, 'maxMessagesPerDay', parseInt(e.target.value) || 0)
-        }
-        min="0"
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
-      />
-      <p className="text-[11px] text-gray-400 mt-0.5">
-        Messages sent per day
-      </p>
-    </div>
-  </div>
-</div>
-
-      {/* ── Conversation strategy ─────────────────────────── */}
-      <div className="pt-3 border-t border-gray-200">
-        <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-          Conversation Strategy
+            + Add
+          </button>
         </div>
 
-        <label className="block text-xs font-medium text-gray-600 mb-1">
-          How far should the agent take each conversation?
-        </label>
-        <select
-          value={limit.conversationMode || 'until_meeting'}
-          onChange={(e) => {
-            const mode = e.target.value;
-            updateChannelLimit(index, 'conversationMode', mode);
-            // Sensible default when switching to "limited" for the first time
-            if (
-              mode === 'limited' &&
-              (!limit.maxOutboundMessages || limit.maxOutboundMessages < 1)
-            ) {
-              updateChannelLimit(index, 'maxOutboundMessages', 1);
-            }
-          }}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
-        >
-          <option value="until_meeting">
-            Converse until meeting / goal  —  agent keeps replying
-          </option>
-          <option value="limited">
-            Limit to first N messages  —  agent pauses after N sends
-          </option>
-        </select>
+        <p className="text-xs text-gray-500 mb-3">
+          Rate limits protect your account from being flagged. The{' '}
+          <strong>conversation strategy</strong> controls how far the agent carries each
+          conversation.
+        </p>
 
-        {limit.conversationMode === 'until_meeting' && (
-          <p className="text-[11px] text-gray-500 mt-1">
-            The agent will keep the conversation going end-to-end until it books a
-            meeting, gets marked converted, or the person becomes unresponsive.
-          </p>
-        )}
+        {formData.channelLimits.map((limit, index) => (
+          <div
+            key={index}
+            className="border border-gray-200 rounded-lg p-4 mb-3 space-y-4 bg-gray-50"
+          >
+            <div className="flex gap-2 items-center">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Channel
+                </label>
+                <select
+                  value={limit.channel}
+                  onChange={(e) => updateChannelLimit(index, 'channel', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+                >
+                  <option value="linkedIn">LinkedIn</option>
+                  <option value="email">Email</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="sms">SMS</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeChannelLimit(index)}
+                className="mt-5 px-3 py-2 text-gray-400 hover:text-red-500"
+                title="Remove this channel"
+              >
+                ✕
+              </button>
+            </div>
 
-        {limit.conversationMode === 'limited' && (
-          <div className="mt-3">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Max Outbound Messages <span className="text-gray-400">(per thread)</span>
-            </label>
-            <input
-              type="number"
-              value={limit.maxOutboundMessages || 0}
-              onChange={(e) =>
-                updateChannelLimit(index, 'maxOutboundMessages', parseInt(e.target.value) || 0)
-              }
-              min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
-              placeholder="e.g., 3"
-            />
-            <p className="text-[11px] text-gray-500 mt-1">
-              After sending this many messages on a single thread, the agent will set
-              the thread to <span className="font-mono">paused</span> with reason
-              <span className="font-mono"> max_messages_reached</span> and stop —
-              unless you manually set it to
-              <span className="font-mono"> "In Conversation (Ignore Limits)"</span>.
-            </p>
+            <div>
+              <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                Daily Rate Limits
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Max Connections / Day
+                  </label>
+                  <input
+                    type="number"
+                    value={limit.maxConnectionsPerDay}
+                    onChange={(e) =>
+                      updateChannelLimit(
+                        index,
+                        'maxConnectionsPerDay',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-0.5">Invites sent per day</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Max Messages / Day
+                  </label>
+                  <input
+                    type="number"
+                    value={limit.maxMessagesPerDay}
+                    onChange={(e) =>
+                      updateChannelLimit(
+                        index,
+                        'maxMessagesPerDay',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-0.5">Messages sent per day</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-200">
+              <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                Conversation Strategy
+              </div>
+
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                How far should the agent take each conversation?
+              </label>
+              <select
+                value={limit.conversationMode || 'until_meeting'}
+                onChange={(e) => {
+                  const mode = e.target.value;
+                  updateChannelLimit(index, 'conversationMode', mode);
+                  if (
+                    mode === 'limited' &&
+                    (!limit.maxOutboundMessages || limit.maxOutboundMessages < 1)
+                  ) {
+                    updateChannelLimit(index, 'maxOutboundMessages', 1);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+              >
+                <option value="until_meeting">
+                  Converse until meeting / goal — agent keeps replying
+                </option>
+                <option value="limited">
+                  Limit to first N messages — agent pauses after N sends
+                </option>
+              </select>
+
+              {limit.conversationMode === 'until_meeting' && (
+                <p className="text-[11px] text-gray-500 mt-1">
+                  The agent will keep the conversation going end-to-end until it books a
+                  meeting, gets marked converted, or the person becomes unresponsive.
+                </p>
+              )}
+
+              {limit.conversationMode === 'limited' && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Max Outbound Messages{' '}
+                    <span className="text-gray-400">(per thread)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={limit.maxOutboundMessages || 0}
+                    onChange={(e) =>
+                      updateChannelLimit(
+                        index,
+                        'maxOutboundMessages',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+                    placeholder="e.g., 3"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    After sending this many messages on a single thread, the agent will set
+                    the thread to <span className="font-mono">paused</span> with reason{' '}
+                    <span className="font-mono">max_messages_reached</span> and stop — unless
+                    you manually set it to{' '}
+                    <span className="font-mono">"In Conversation (Ignore Limits)"</span>.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        ))}
       </div>
-    </div>
-  ))}
-</div>
 
       <div className="flex gap-3 pt-4">
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="flex-1 btn-primary"
-        >
-          {isLoading ? 'Saving...' : (agent ? 'Update Agent' : 'Create Agent')}
+        <button type="submit" disabled={isLoading} className="flex-1 btn-primary">
+          {isLoading ? 'Saving...' : agent ? 'Update Agent' : 'Create Agent'}
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="btn-secondary"
-        >
+        <button type="button" onClick={onClose} className="btn-secondary">
           Cancel
         </button>
       </div>

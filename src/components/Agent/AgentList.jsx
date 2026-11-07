@@ -1,105 +1,108 @@
+// src/components/AgentList.js
+
 import React, { useState, useEffect } from 'react';
 import { useAgentStore } from '../../store/agentStore';
 import { AgentCard } from './AgentCard';
 import { useUIStore, useAuthStore, useAppStore } from '../../store';
 import { WebsiteModal } from './WebsiteModal';
 import { agentsService } from '../../services/agents';
+import { companyProfileService } from '../../services/companyProfile';
 
 export function AgentList({ onEditAgent }) {
   const { agents, isLoading, error, fetchAgents, deleteAgent } = useAgentStore();
   const { showToast } = useUIStore();
   const { client } = useAuthStore();
   const { activeClientId } = useAppStore();
-  
+
   const clientId = activeClientId || client?.id;
-  
+
   const [selectedId, setSelectedId] = useState(null);
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
-  const [websiteData, setWebsiteData] = useState(null);
 
-  // NEW: state for counts
+  // Company profile state (replaces localStorage-backed websiteData)
+  const [companyProfile, setCompanyProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Counts
   const [countsMap, setCountsMap] = useState({});
   const [countsLoading, setCountsLoading] = useState(false);
 
-  console.log('🔍 [AgentList] Rendering with clientId:', clientId);
-
-  // Load website data from localStorage
-  const loadWebsiteData = () => {
-    console.log('🔄 [AgentList] loadWebsiteData called');
-    
+  // Load company profile from server
+  const loadCompanyProfile = async () => {
     if (!clientId) {
-      console.log('❌ [AgentList] No clientId available, setting websiteData to null');
-      setWebsiteData(null);
+      setCompanyProfile(null);
+      setProfileLoading(false);
       return;
     }
-    
-    const key = `agentWebsiteData_${clientId}`;
-    console.log(`🔑 [AgentList] Looking for key: "${key}"`);
-    
-    const savedWebsiteData = localStorage.getItem(key);
-    console.log(`📦 [AgentList] Raw data from localStorage:`, savedWebsiteData);
-    
-    if (savedWebsiteData) {
-      try {
-        const parsed = JSON.parse(savedWebsiteData);
-        console.log('✅ [AgentList] Parsed data:', parsed);
-        console.log('📊 [AgentList] Data structure:', {
-          hasData: !!parsed,
-          hasDataDotData: !!parsed?.data,
-          aiDescription: parsed?.data?.aiDescription?.substring(0, 50) + '...' || 'null',
-          businessServices: parsed?.data?.businessServices?.substring(0, 50) + '...' || 'null',
-        });
-        setWebsiteData(parsed);
-      } catch (e) {
-        console.error('❌ [AgentList] Error loading website data:', e);
-        setWebsiteData(null);
-      }
-    } else {
-      console.log('❌ [AgentList] No data found for key:', key);
-      setWebsiteData(null);
+    try {
+      setProfileLoading(true);
+      const res = await companyProfileService.get();
+      setCompanyProfile(res.data);
+    } catch (e) {
+      console.error('[AgentList] Failed to load company profile:', e);
+      setCompanyProfile(null);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
-  // Load data on mount and when client changes
   useEffect(() => {
-    console.log('🔄 [AgentList] useEffect triggered - clientId changed or mount');
-    loadWebsiteData();
+    loadCompanyProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  // Reload when modal closes
+  // Reload profile when modal closes (in case it saved)
   useEffect(() => {
-    console.log('🔄 [AgentList] Modal state changed - isOpen:', isWebsiteModalOpen);
     if (!isWebsiteModalOpen) {
-      loadWebsiteData();
+      loadCompanyProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWebsiteModalOpen]);
 
-  // Save website data with client ID
-  const handleWebsiteDataSaved = (data) => {
-    console.log('💾 [AgentList] handleWebsiteDataSaved called with data:', data);
-    if (clientId) {
-      const key = `agentWebsiteData_${clientId}`;
-      console.log(`💾 [AgentList] Saving to key: "${key}"`);
-      localStorage.setItem(key, JSON.stringify(data));
-      console.log('✅ [AgentList] Data saved to localStorage');
-      setWebsiteData(data);
+  const handleWebsiteDataSaved = async (data) => {
+    try {
+      const res = await companyProfileService.save({
+        url: data.url,
+        aiDescription: data.aiDescription,
+        businessServices: data.businessServices,
+      });
+      setCompanyProfile(res.data);
       showToast('✅ Company information saved!', 'success');
-    } else {
-      console.log('❌ [AgentList] No clientId available, cannot save');
+    } catch (e) {
+      console.error('[AgentList] Save failed:', e);
+      showToast(
+        e.response?.data?.message ||
+          e.response?.data?.error ||
+          'Failed to save company information',
+        'error'
+      );
+    }
+  };
+
+  const handleClearCompanyProfile = async () => {
+    if (!window.confirm('Are you sure you want to clear the company information for this client?')) {
+      return;
+    }
+    try {
+      const res = await companyProfileService.clear();
+      setCompanyProfile(res.data);
+      showToast('✅ Company information cleared', 'success');
+    } catch (e) {
+      console.error('[AgentList] Clear failed:', e);
+      showToast('Failed to clear company information', 'error');
     }
   };
 
   const handleOpenWebsiteModal = () => {
-    console.log('🔄 [AgentList] Opening WebsiteModal');
     setIsWebsiteModalOpen(true);
   };
 
   useEffect(() => {
-    console.log('🔄 [AgentList] Fetching agents...');
     fetchAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // NEW: Fetch counts whenever agents change
+  // Counts
   useEffect(() => {
     if (agents.length === 0) {
       setCountsMap({});
@@ -116,16 +119,16 @@ export function AgentList({ onEditAgent }) {
         ]);
 
         const newMap = {};
-        agents.forEach(agent => {
+        agents.forEach((agent) => {
           const agentId = agent._id;
-          const linkedin = leadRes.success ? (leadRes.counts[agentId] || 0) : 0;
-          const email = emailRes.success ? (emailRes.counts[agentId] || 0) : 0;
-          const articles = articleRes.success ? (articleRes.counts[agentId] || 0) : 0;
+          const linkedin = leadRes.success ? leadRes.counts[agentId] || 0 : 0;
+          const email = emailRes.success ? emailRes.counts[agentId] || 0 : 0;
+          const articles = articleRes.success ? articleRes.counts[agentId] || 0 : 0;
           newMap[agentId] = { linkedin, email, articles };
         });
         setCountsMap(newMap);
-      } catch (error) {
-        console.error('Failed to fetch agent counts:', error);
+      } catch (err) {
+        console.error('Failed to fetch agent counts:', err);
       } finally {
         setCountsLoading(false);
       }
@@ -145,12 +148,27 @@ export function AgentList({ onEditAgent }) {
     }
   };
 
-  // Check if website data exists for this client
-  const hasCompanyInfo = websiteData && 
-    (websiteData.data?.aiDescription || websiteData.description || websiteData.data?.businessServices || websiteData.services);
+  // Derived: does this client have company info?
+  const website = companyProfile?.website || null;
+  const hasCompanyInfo =
+    !!website && !!(website.aiDescription || website.businessServices);
 
-  console.log('🏢 [AgentList] hasCompanyInfo:', hasCompanyInfo);
-  console.log('📊 [AgentList] websiteData:', websiteData);
+  // Adapt server Website -> shape the modal expects
+  const modalExistingData = website
+    ? {
+        data: {
+          _id: website._id,
+          url: website.url,
+          aiDescription: website.aiDescription,
+          businessServices: website.businessServices,
+          title: website.title,
+          normalizedUrl: website.normalizedUrl,
+          status: website.status,
+          lastFetchedAt: website.lastFetchedAt,
+        },
+        url: website.url,
+      }
+    : null;
 
   if (isLoading && agents.length === 0) {
     return (
@@ -170,10 +188,7 @@ export function AgentList({ onEditAgent }) {
       <div className="text-center py-8">
         <div className="text-4xl mb-3">⚠️</div>
         <p className="text-gray-500">{error}</p>
-        <button 
-          onClick={() => fetchAgents()}
-          className="btn-secondary mt-4"
-        >
+        <button onClick={() => fetchAgents()} className="btn-secondary mt-4">
           Try Again
         </button>
       </div>
@@ -187,8 +202,8 @@ export function AgentList({ onEditAgent }) {
           <div>
             <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
             <p className="text-sm text-gray-500">
-              {hasCompanyInfo 
-                ? '✅ Company information has been added' 
+              {hasCompanyInfo
+                ? '✅ Company information has been added'
                 : 'Add your company information for better agent generation'}
             </p>
           </div>
@@ -204,10 +219,7 @@ export function AgentList({ onEditAgent }) {
           <div className="text-5xl mb-4">🤖</div>
           <h3 className="text-lg font-medium text-gray-700 mb-2">No Agents Found</h3>
           <p className="text-gray-500 text-sm mb-4">Create your first agent to get started</p>
-          <button 
-            onClick={() => onEditAgent(null)}
-            className="btn-primary"
-          >
+          <button onClick={() => onEditAgent(null)} className="btn-primary">
             + Create Agent
           </button>
         </div>
@@ -216,7 +228,7 @@ export function AgentList({ onEditAgent }) {
           isOpen={isWebsiteModalOpen}
           onClose={() => setIsWebsiteModalOpen(false)}
           onSave={handleWebsiteDataSaved}
-          existingData={websiteData}
+          existingData={modalExistingData}
         />
       </>
     );
@@ -228,25 +240,15 @@ export function AgentList({ onEditAgent }) {
         <div>
           <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
           <p className="text-sm text-gray-500">
-            {hasCompanyInfo 
-              ? '✅ Company information has been added' 
+            {hasCompanyInfo
+              ? '✅ Company information has been added'
               : 'Add your company information for better agent generation'}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {hasCompanyInfo && (
             <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to clear the company information for this client?')) {
-                  if (clientId) {
-                    const key = `agentWebsiteData_${clientId}`;
-                    console.log(`🗑️ [AgentList] Clearing data for key: "${key}"`);
-                    localStorage.removeItem(key);
-                    setWebsiteData(null);
-                    showToast('✅ Company information cleared', 'success');
-                  }
-                }
-              }}
+              onClick={handleClearCompanyProfile}
               className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
             >
               🗑️ Clear
@@ -286,7 +288,7 @@ export function AgentList({ onEditAgent }) {
         isOpen={isWebsiteModalOpen}
         onClose={() => setIsWebsiteModalOpen(false)}
         onSave={handleWebsiteDataSaved}
-        existingData={websiteData}
+        existingData={modalExistingData}
       />
     </>
   );

@@ -12,27 +12,19 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   const [websiteData, setWebsiteData] = useState(null);
   const [error, setError] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
-  
-  // Main fields - used for both fetched and manual entry
+
   const [companyDescription, setCompanyDescription] = useState('');
   const [services, setServices] = useState('');
 
-  console.log('🔍 [WebsiteModal] Rendering, isOpen:', isOpen);
-  console.log('📦 [WebsiteModal] existingData:', existingData);
-
-  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      console.log('🔄 [WebsiteModal] Modal opened');
       if (existingData) {
-        console.log('📦 [WebsiteModal] Loading existing data:', existingData);
         setWebsiteData(existingData);
         setUrl(existingData.url || '');
-        setCompanyDescription(existingData.data?.aiDescription || existingData.description || '');
-        setServices(existingData.data?.businessServices || existingData.services || '');
+        setCompanyDescription(existingData.data?.aiDescription || '');
+        setServices(existingData.data?.businessServices || '');
         setError(null);
       } else {
-        console.log('🆕 [WebsiteModal] Starting fresh (no existing data)');
         setUrl('');
         setWebsiteData(null);
         setError(null);
@@ -43,13 +35,10 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   }, [isOpen, existingData]);
 
   const handleFetchWebsite = async () => {
-    console.log('🔄 [WebsiteModal] handleFetchWebsite called, URL:', url);
-    
     if (!url.trim()) {
       showToast('Please enter a website URL', 'error');
       return;
     }
-
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       showToast('Please enter a valid URL (include http:// or https://)', 'error');
       return;
@@ -60,42 +49,38 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     setError(null);
 
     try {
-      console.log('📤 [WebsiteModal] Fetching website:', url);
-      
-      const response = await api.post('/api/websites', {
-        url: url.trim(),
-        forceRefresh: true,
-        isPrimary: false
-      }, {
-        timeout: 600000
-      });
+      const response = await api.post(
+        '/api/websites',
+        {
+          url: url.trim(),
+          forceRefresh: true,
+          isPrimary: true, // ← changed: modal establishes the primary website
+        },
+        { timeout: 600000 }
+      );
 
       const data = response.data;
-
       if (!data.success) {
         throw new Error(data.message || 'Failed to fetch website information');
       }
 
       const website = data.data;
-      
-      console.log('✅ [WebsiteModal] Website fetched successfully:', website);
-      
-      // Store the fetched data
+
       setWebsiteData({
         data: website,
         url: url.trim(),
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
       });
-      
-      // Populate the editable fields with fetched data
       setCompanyDescription(website.aiDescription || '');
       setServices(website.businessServices || '');
-      
-      showToast('✅ Website information fetched successfully!', 'success');
 
+      showToast('✅ Website information fetched successfully!', 'success');
     } catch (err) {
       console.error('❌ [WebsiteModal] Error fetching website:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch website information';
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to fetch website information';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
@@ -105,47 +90,20 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleSave = () => {
-    console.log('🔄 [WebsiteModal] handleSave called');
-    console.log('📝 Company Description:', companyDescription);
-    console.log('📝 Services:', services);
-    
-    // Build clean data - keep field names backend expects
-    const dataToSave = {
-      aiDescription: companyDescription,
-      businessServices: services,
-      title: websiteData?.data?.title || '',
-      url: websiteData?.data?.url || url.trim() || '',
-      normalizedUrl: websiteData?.data?.normalizedUrl || '',
-      status: websiteData?.data?.status || 'manual',
-      _id: websiteData?.data?._id || null,
-      lastFetchedAt: websiteData?.data?.lastFetchedAt || null,
-    };
-
-    console.log('📤 [WebsiteModal] Data to save:', dataToSave);
-
-    // Validate at least one field has content
     if (!companyDescription.trim() && !services.trim()) {
       showToast('Please enter a company description or services', 'error');
       return;
     }
-
-    const fullData = {
-      data: dataToSave,
-      url: url.trim() || 'manual-entry',
-      savedAt: new Date().toISOString(),
-      isManual: !websiteData?.data?._id,
-    };
-
-    console.log('📤 [WebsiteModal] Full data object:', fullData);
-    console.log('📤 [WebsiteModal] Calling onSave...');
-    
-    onSave(fullData);
-    console.log('✅ [WebsiteModal] onSave called, closing modal');
+    // Emit the flat shape the parent's PUT /company-profile expects
+    onSave({
+      url: url.trim() || '',
+      aiDescription: companyDescription,
+      businessServices: services,
+    });
     onClose();
   };
 
   const handleRefresh = () => {
-    console.log('🔄 [WebsiteModal] handleRefresh called');
     if (url.trim()) {
       setWebsiteData(null);
       handleFetchWebsite();
@@ -155,7 +113,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleClose = () => {
-    console.log('🔄 [WebsiteModal] handleClose called');
     setWebsiteData(null);
     setError(null);
     setLoading(false);
@@ -167,31 +124,35 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'success': { label: '✅ Success', class: 'bg-green-100 text-green-700' },
-      'partial': { label: '⚠️ Partial', class: 'bg-yellow-100 text-yellow-700' },
-      'error': { label: '❌ Error', class: 'bg-red-100 text-red-700' },
-      'timeout': { label: '⏱️ Timeout', class: 'bg-yellow-100 text-yellow-700' },
-      'manual': { label: '✏️ Manual', class: 'bg-blue-100 text-blue-700' }
+      success: { label: '✅ Success', class: 'bg-green-100 text-green-700' },
+      partial: { label: '⚠️ Partial', class: 'bg-yellow-100 text-yellow-700' },
+      error: { label: '❌ Error', class: 'bg-red-100 text-red-700' },
+      timeout: { label: '⏱️ Timeout', class: 'bg-yellow-100 text-yellow-700' },
+      manual: { label: '✏️ Manual', class: 'bg-blue-100 text-blue-700' },
     };
-    const s = statusMap[status] || { label: status || 'Unknown', class: 'bg-gray-100 text-gray-700' };
-    return s;
+    return (
+      statusMap[status] || {
+        label: status || 'Unknown',
+        class: 'bg-gray-100 text-gray-700',
+      }
+    );
   };
 
-  // Check if user has customized the content
-  const isCustomized = websiteData?.data?._id && 
-    (companyDescription !== websiteData.data.aiDescription || 
-     services !== websiteData.data.businessServices);
+  const isCustomized =
+    websiteData?.data?._id &&
+    (companyDescription !== websiteData.data.aiDescription ||
+      services !== websiteData.data.businessServices);
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={handleClose} 
-      title="🌐 Company Information" 
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="🌐 Company Information"
       maxWidth="lg"
       closeOnOutsideClick={false}
     >
       <div className="space-y-4">
-        {/* URL Input - Optional */}
+        {/* URL Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Website URL <span className="text-gray-400 text-xs">(optional)</span>
@@ -202,9 +163,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleFetchWebsite();
-                }
+                if (e.key === 'Enter') handleFetchWebsite();
               }}
               placeholder="https://example.com"
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
@@ -223,7 +182,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* Refresh Button */}
         {websiteData && websiteData.data?._id && (
           <div className="flex justify-end">
             <button
@@ -237,7 +195,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {/* Loading State */}
         {loading && (
           <div className="text-center py-4">
             <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-primary-600 rounded-full"></div>
@@ -245,7 +202,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {/* Error State */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <p className="text-sm text-red-700">
@@ -254,7 +210,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {/* Company Description - Same field for fetched or manual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Company Description <span className="text-gray-400 text-xs">(required)</span>
@@ -271,7 +226,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* Services/Products - Same field for fetched or manual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Services / Products <span className="text-gray-400 text-xs">(optional)</span>
@@ -288,7 +242,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {/* Fetched Data Summary */}
         {websiteData && websiteData.data?._id && websiteData.data?.title && (
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
             <div className="flex items-center justify-between">
@@ -301,7 +254,11 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
                 </span>
               ) : (
                 websiteData.data?.status && (
-                  <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(websiteData.data.status).class}`}>
+                  <span
+                    className={`inline-block px-2 py-0.5 text-xs rounded-full ${
+                      getStatusBadge(websiteData.data.status).class
+                    }`}
+                  >
                     {getStatusBadge(websiteData.data.status).label}
                   </span>
                 )
@@ -313,9 +270,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
               </div>
             )}
             {websiteData.url && (
-              <div className="text-xs text-gray-400 mt-1">
-                URL: {websiteData.url}
-              </div>
+              <div className="text-xs text-gray-400 mt-1">URL: {websiteData.url}</div>
             )}
             {isCustomized && (
               <div className="text-xs text-amber-600 mt-2 border-t border-gray-200 pt-2">
@@ -325,7 +280,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {/* Manual Entry Indicator */}
         {!websiteData?.data?._id && (companyDescription || services) && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700">
@@ -334,7 +288,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-3 pt-4 border-t border-gray-200">
           <button
             type="button"
@@ -344,11 +297,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           >
             ✅ Confirm & Store Data
           </button>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="btn-secondary"
-          >
+          <button type="button" onClick={handleClose} className="btn-secondary">
             Cancel
           </button>
         </div>
