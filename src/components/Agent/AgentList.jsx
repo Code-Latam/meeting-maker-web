@@ -1,6 +1,6 @@
 // src/components/AgentList.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAgentStore } from '../../store/agentStore';
 import { AgentCard } from './AgentCard';
 import { useUIStore, useAuthStore, useAppStore } from '../../store';
@@ -19,15 +19,15 @@ export function AgentList({ onEditAgent }) {
   const [selectedId, setSelectedId] = useState(null);
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
 
-  // Company profile state (replaces localStorage-backed websiteData)
   const [companyProfile, setCompanyProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [polling, setPolling] = useState(false);
+  const [pollingTimedOut, setPollingTimedOut] = useState(false);
+  const pollTimerRef = useRef(null);
 
-  // Counts
   const [countsMap, setCountsMap] = useState({});
   const [countsLoading, setCountsLoading] = useState(false);
 
-  // Load company profile from server
   const loadCompanyProfile = async () => {
     if (!clientId) {
       setCompanyProfile(null);
@@ -51,13 +51,84 @@ export function AgentList({ onEditAgent }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  // Reload profile when modal closes (in case it saved)
   useEffect(() => {
     if (!isWebsiteModalOpen) {
       loadCompanyProfile();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWebsiteModalOpen]);
+
+  // Polling: while status is "pending", poll every 5s for up to 5 minutes.
+  // The backend is expected to flip status to "ready" or "failed" on its own,
+  // but this caps the spinner in case the scraper crashes or hangs.
+  useEffect(() => {
+    const status = companyProfile?.status;
+    if (status !== 'pending') {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+        setPolling(false);
+      }
+      setPollingTimedOut(false);
+      return;
+    }
+
+    if (pollTimerRef.current) return; // already polling
+
+    setPolling(true);
+
+    const MAX_ATTEMPTS = 60; // 60 × 5s = 5 minutes
+    let attempts = 0;
+
+    const tick = async () => {
+      attempts += 1;
+      try {
+        const res = await companyProfileService.get();
+        setCompanyProfile(res.data);
+        if (res.data?.status !== 'pending') {
+          if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+          }
+          setPolling(false);
+          if (res.data?.status === 'ready') {
+            showToast('✅ Company profile is ready', 'success');
+          } else if (res.data?.status === 'failed') {
+            showToast(
+              "⚠️ We couldn't read your website. Add company info manually.",
+              'error'
+            );
+          }
+          return;
+        }
+      } catch (e) {
+        console.error('[AgentList] Poll failed:', e);
+        // Keep polling — a transient network error shouldn't kill the loop
+      }
+
+      if (attempts >= MAX_ATTEMPTS) {
+        console.warn(
+          '[AgentList] Polling stopped after 5 minutes; status still pending'
+        );
+        if (pollTimerRef.current) {
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+        setPolling(false);
+        setPollingTimedOut(true);
+      }
+    };
+
+    pollTimerRef.current = setInterval(tick, 5000);
+
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyProfile?.status]);
 
   const handleWebsiteDataSaved = async (data) => {
     try {
@@ -80,7 +151,11 @@ export function AgentList({ onEditAgent }) {
   };
 
   const handleClearCompanyProfile = async () => {
-    if (!window.confirm('Are you sure you want to clear the company information for this client?')) {
+    if (
+      !window.confirm(
+        'Are you sure you want to clear the company information for this client?'
+      )
+    ) {
       return;
     }
     try {
@@ -102,7 +177,6 @@ export function AgentList({ onEditAgent }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Counts
   useEffect(() => {
     if (agents.length === 0) {
       setCountsMap({});
@@ -148,12 +222,13 @@ export function AgentList({ onEditAgent }) {
     }
   };
 
-  // Derived: does this client have company info?
   const website = companyProfile?.website || null;
+  const status = companyProfile?.status || 'not_started';
   const hasCompanyInfo =
     !!website && !!(website.aiDescription || website.businessServices);
+  const isPending = status === 'pending';
+  const isFailed = status === 'failed';
 
-  // Adapt server Website -> shape the modal expects
   const modalExistingData = website
     ? {
         data: {
@@ -169,6 +244,101 @@ export function AgentList({ onEditAgent }) {
         url: website.url,
       }
     : null;
+
+  // ---------- Company Info Banner ----------
+  const renderCompanyBanner = () => {
+    // Pending — normal spinner state
+    if (isPending && !pollingTimedOut) {
+      return (
+        <div className="mb-6 p-4 bg-white border border-cyan-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
+            <p className="text-sm text-cyan-700 flex items-center gap-2">
+              <span className="inline-block w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              Setting up your company profile from your website…
+            </p>
+          </div>
+          <button
+            onClick={handleOpenWebsiteModal}
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+          >
+            Edit manually
+          </button>
+        </div>
+      );
+    }
+
+    // Pending — but polling timed out at 5 min
+    if (isPending && pollingTimedOut) {
+      return (
+        <div className="mb-6 p-4 bg-white border border-cyan-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
+            <p className="text-sm text-gray-600">
+              ⏳ Still setting up — this is taking longer than usual. You can add
+              company info manually while you wait.
+            </p>
+          </div>
+          <button
+            onClick={handleOpenWebsiteModal}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+          >
+            + Add Company Info
+          </button>
+        </div>
+      );
+    }
+
+    // Failed
+    if (isFailed) {
+      return (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
+            <p className="text-sm text-yellow-700">
+              ⚠️ We couldn&apos;t read your website. Add company info manually.
+            </p>
+          </div>
+          <button
+            onClick={handleOpenWebsiteModal}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+          >
+            + Add Company Info
+          </button>
+        </div>
+      );
+    }
+
+    // ready / not_started
+    return (
+      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
+          <p className="text-sm text-gray-500">
+            {hasCompanyInfo
+              ? '✅ Company information has been added'
+              : 'Add your company information for better agent generation'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasCompanyInfo && (
+            <button
+              onClick={handleClearCompanyProfile}
+              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              🗑️ Clear
+            </button>
+          )}
+          <button
+            onClick={handleOpenWebsiteModal}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+          >
+            {hasCompanyInfo ? '📝 Edit Company Info' : '+ Add Company Info'}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   if (isLoading && agents.length === 0) {
     return (
@@ -198,23 +368,7 @@ export function AgentList({ onEditAgent }) {
   if (agents.length === 0) {
     return (
       <>
-        <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
-            <p className="text-sm text-gray-500">
-              {hasCompanyInfo
-                ? '✅ Company information has been added'
-                : 'Add your company information for better agent generation'}
-            </p>
-          </div>
-          <button
-            onClick={handleOpenWebsiteModal}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
-          >
-            {hasCompanyInfo ? '📝 Edit Company Info' : '+ Add Company Info'}
-          </button>
-        </div>
-
+        {renderCompanyBanner()}
         <div className="text-center py-12">
           <div className="text-5xl mb-4">🤖</div>
           <h3 className="text-lg font-medium text-gray-700 mb-2">No Agents Found</h3>
@@ -236,32 +390,7 @@ export function AgentList({ onEditAgent }) {
 
   return (
     <>
-      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
-          <p className="text-sm text-gray-500">
-            {hasCompanyInfo
-              ? '✅ Company information has been added'
-              : 'Add your company information for better agent generation'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasCompanyInfo && (
-            <button
-              onClick={handleClearCompanyProfile}
-              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              🗑️ Clear
-            </button>
-          )}
-          <button
-            onClick={handleOpenWebsiteModal}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
-          >
-            {hasCompanyInfo ? '📝 Edit Company Info' : '+ Add Company Info'}
-          </button>
-        </div>
-      </div>
+      {renderCompanyBanner()}
 
       <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:grid-cols-3">
         {agents.map((agent) => {
