@@ -77,7 +77,7 @@ export function AgentList({ onEditAgent }) {
 
     setPolling(true);
 
-    const MAX_ATTEMPTS = 60; // 60 × 5s = 5 minutes
+    const MAX_ATTEMPTS = 120; // 120 × 5s = 10 minutes
     let attempts = 0;
 
     const tick = async () => {
@@ -108,7 +108,7 @@ export function AgentList({ onEditAgent }) {
 
       if (attempts >= MAX_ATTEMPTS) {
         console.warn(
-          '[AgentList] Polling stopped after 5 minutes; status still pending'
+          '[AgentList] Polling stopped after 10 minutes; status still pending'
         );
         if (pollTimerRef.current) {
           clearInterval(pollTimerRef.current);
@@ -254,9 +254,9 @@ export function AgentList({ onEditAgent }) {
           <div>
             <h3 className="text-sm font-medium text-gray-700">🏢 Company Information</h3>
             <p className="text-sm text-cyan-700 flex items-center gap-2">
-              <span className="inline-block w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-              Setting up your company profile from your website…
-            </p>
+            <span className="inline-block w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            Setting up your company profile and generating agent profiles…
+          </p>
           </div>
           <button
             onClick={handleOpenWebsiteModal}
