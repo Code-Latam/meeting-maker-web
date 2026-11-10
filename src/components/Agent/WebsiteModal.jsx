@@ -1,6 +1,6 @@
 // src/components/WebsiteModal.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUIStore } from '../../store';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
@@ -12,9 +12,14 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   const [websiteData, setWebsiteData] = useState(null);
   const [error, setError] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
+  const [elapsedSec, setElapsedSec] = useState(0);
 
   const [companyDescription, setCompanyDescription] = useState('');
   const [services, setServices] = useState('');
+
+  // Refs for cancelable polling
+  const cancelRef = useRef(false);
+  const elapsedTimerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +39,24 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
     }
   }, [isOpen, existingData]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cancelRef.current = true;
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
+  }, []);
+
+  const fillFromWebsite = (website) => {
+    setWebsiteData({
+      data: website,
+      url: website.url || url.trim(),
+      savedAt: new Date().toISOString(),
+    });
+    setCompanyDescription(website.aiDescription || '');
+    setServices(website.businessServices || '');
+  };
+
   const handleFetchWebsite = async () => {
     if (!url.trim()) {
       showToast('Please enter a website URL', 'error');
@@ -44,49 +67,114 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       return;
     }
 
+    cancelRef.current = false;
     setIsFetching(true);
     setLoading(true);
     setError(null);
+    setElapsedSec(0);
+
+    // Start elapsed timer
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    elapsedTimerRef.current = setInterval(() => {
+      setElapsedSec((s) => s + 1);
+    }, 1000);
 
     try {
-      const response = await api.post(
+      // 1. Kick off the scrape — returns immediately
+      const startRes = await api.post(
         '/api/websites',
         {
           url: url.trim(),
           forceRefresh: true,
-          isPrimary: true, // ← changed: modal establishes the primary website
+          isPrimary: true,
         },
-        { timeout: 600000 }
+        { timeout: 30000 } // short timeout, since this returns immediately
       );
 
-      const data = response.data;
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to fetch website information');
+      const startData = startRes.data;
+      if (!startData.success) {
+        throw new Error(startData.message || 'Failed to start website fetch');
       }
 
-      const website = data.data;
+      const { jobId, status } = startData;
 
-      setWebsiteData({
-        data: website,
-        url: url.trim(),
-        savedAt: new Date().toISOString(),
-      });
-      setCompanyDescription(website.aiDescription || '');
-      setServices(website.businessServices || '');
+      // Fast path: cached success, no scrape needed
+      if (status === 'success') {
+        const pollRes = await api.get(`/api/websites/${jobId}/poll`);
+        fillFromWebsite(pollRes.data.data);
+        showToast('✅ Website information loaded', 'success');
+        return;
+      }
 
-      showToast('✅ Website information fetched successfully!', 'success');
+      // 2. Poll until status is no longer "processing"
+      const POLL_INTERVAL_MS = 3000;
+      const MAX_ATTEMPTS = 100; // ~5 minutes
+      let attempt = 0;
+
+      while (attempt < MAX_ATTEMPTS) {
+        if (cancelRef.current) {
+          showToast('Fetch canceled', 'info');
+          return;
+        }
+
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+        attempt++;
+
+        if (cancelRef.current) {
+          showToast('Fetch canceled', 'info');
+          return;
+        }
+
+        const pollRes = await api.get(`/api/websites/${jobId}/poll`);
+        const website = pollRes.data.data;
+
+        if (!website) continue;
+
+        if (website.status === 'success' || website.status === 'partial') {
+          fillFromWebsite(website);
+          showToast(
+            website.status === 'partial'
+              ? '⚠️ Website fetched (AI enrichment partially failed)'
+              : '✅ Website information fetched successfully!',
+            website.status === 'partial' ? 'warning' : 'success'
+          );
+          return;
+        }
+
+        if (website.status === 'error' || website.status === 'timeout') {
+          throw new Error(
+            website.error || 'Failed to fetch website information'
+          );
+        }
+        // status === 'processing' → keep polling
+      }
+
+      throw new Error('Timed out waiting for website fetch (5 minutes)');
     } catch (err) {
+      if (cancelRef.current) {
+        // User canceled — no error toast
+        return;
+      }
       console.error('❌ [WebsiteModal] Error fetching website:', err);
       const errorMessage =
         err.response?.data?.message ||
+        err.response?.data?.error ||
         err.message ||
         'Failed to fetch website information';
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
+      }
       setLoading(false);
       setIsFetching(false);
     }
+  };
+
+  const handleCancelFetch = () => {
+    cancelRef.current = true;
   };
 
   const handleSave = () => {
@@ -94,7 +182,6 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       showToast('Please enter a company description or services', 'error');
       return;
     }
-    // Emit the flat shape the parent's PUT /company-profile expects
     onSave({
       url: url.trim() || '',
       aiDescription: companyDescription,
@@ -113,12 +200,19 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
   };
 
   const handleClose = () => {
+    cancelRef.current = true;
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
     setWebsiteData(null);
     setError(null);
     setLoading(false);
+    setIsFetching(false);
     setCompanyDescription('');
     setServices('');
     setUrl('');
+    setElapsedSec(0);
     onClose();
   };
 
@@ -129,6 +223,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
       error: { label: '❌ Error', class: 'bg-red-100 text-red-700' },
       timeout: { label: '⏱️ Timeout', class: 'bg-yellow-100 text-yellow-700' },
       manual: { label: '✏️ Manual', class: 'bg-blue-100 text-blue-700' },
+      processing: { label: '⏳ Processing', class: 'bg-cyan-100 text-cyan-700' },
     };
     return (
       statusMap[status] || {
@@ -163,10 +258,11 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleFetchWebsite();
+                if (e.key === 'Enter' && !isFetching) handleFetchWebsite();
               }}
               placeholder="https://example.com"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              disabled={isFetching}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none disabled:bg-gray-50"
             />
             <button
               type="button"
@@ -182,12 +278,11 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </p>
         </div>
 
-        {websiteData && websiteData.data?._id && (
+        {websiteData && websiteData.data?._id && !isFetching && (
           <div className="flex justify-end">
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={isFetching}
               className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               🔄 Refresh Data
@@ -196,9 +291,21 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
         )}
 
         {loading && (
-          <div className="text-center py-4">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-primary-600 rounded-full"></div>
-            <p className="text-gray-500 mt-2 text-sm">Fetching website information...</p>
+          <div className="text-center py-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-cyan-200 border-t-cyan-600 rounded-full"></div>
+            <p className="text-cyan-800 mt-3 text-sm font-medium">
+              Reading website… this usually takes 30–90 seconds
+            </p>
+            <p className="text-cyan-600 mt-1 text-xs">
+              Elapsed: {elapsedSec}s
+            </p>
+            <button
+              type="button"
+              onClick={handleCancelFetch}
+              className="mt-3 text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Cancel
+            </button>
           </div>
         )}
 
@@ -218,8 +325,9 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             value={companyDescription}
             onChange={(e) => setCompanyDescription(e.target.value)}
             rows={6}
+            disabled={isFetching}
             placeholder="Describe your company, what you do, your target audience, and your unique selling points..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y disabled:bg-gray-50"
           />
           <p className="text-xs text-gray-500 mt-1">
             Describe your business. This will be used for persona and service generation. You can type, paste, or fetch from a website above.
@@ -234,8 +342,9 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             value={services}
             onChange={(e) => setServices(e.target.value)}
             rows={4}
+            disabled={isFetching}
             placeholder="List your products and services, with brief descriptions..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y disabled:bg-gray-50"
           />
           <p className="text-xs text-gray-500 mt-1">
             List your products/services. You can type, paste, or fetch from a website above.
@@ -280,7 +389,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           </div>
         )}
 
-        {!websiteData?.data?._id && (companyDescription || services) && (
+        {!websiteData?.data?._id && (companyDescription || services) && !isFetching && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700">
               ✏️ Manual entry mode - Your description and services will be saved without a website URL
@@ -292,12 +401,16 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
           <button
             type="button"
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || isFetching}
             className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ✅ Confirm & Store Data
           </button>
-          <button type="button" onClick={handleClose} className="btn-secondary">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="btn-secondary"
+          >
             Cancel
           </button>
         </div>
