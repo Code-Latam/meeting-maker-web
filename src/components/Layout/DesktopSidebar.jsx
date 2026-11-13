@@ -13,9 +13,7 @@ const navItems = [
   { id: 'boost', icon: '🚀', label: 'Boost', path: '/boost' },
   { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' },
   { id: 'templates', icon: '📝', label: 'Templates', path: '/templates' }
-  
 ];
-
 
 const agencyNavItems = [{ id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' }];
 
@@ -33,12 +31,21 @@ export function DesktopSidebar() {
     unipileAccountId: null,
     canConnect: false,
     authMethod: null,
-    needsReconnect: false, // ✅ NEW: Track if account needs reconnection
+    needsReconnect: false,
   });
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [generatedLink, setGeneratedLink] = useState(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkError, setLinkError] = useState(null);
+
+  // ✅ ADDED: Email connection state
+  const [emailStatus, setEmailStatus] = useState({
+    connected: false,
+    checking: true,
+    email: null,
+  });
+  const [isConnectingEmail, setIsConnectingEmail] = useState(false);
+  const [emailError, setEmailError] = useState(null);
 
   // Update display name when client changes
   useEffect(() => {
@@ -62,7 +69,6 @@ export function DesktopSidebar() {
       try {
         const response = await api.get('/api/activity/linkedin-status');
         if (response.data) {
-          // ✅ Determine if account needs reconnection
           const needsReconnect = response.data.status === 'invalid_session' || 
                                  response.data.status === 'disconnected' ||
                                  response.data.status === 'orphaned' ||
@@ -102,9 +108,36 @@ export function DesktopSidebar() {
     };
   }, []);
 
+  // ✅ ADDED: Poll email connection status
+  useEffect(() => {
+    let intervalId = null;
+
+    const checkEmailStatus = async () => {
+      try {
+        const response = await api.get('/auth/email/status');
+        setEmailStatus({
+          connected: !!response.data?.connected,
+          email: response.data?.email || null,
+          checking: false,
+        });
+      } catch (error) {
+        console.error('Failed to check email status:', error);
+        setEmailStatus({ connected: false, checking: false, email: null });
+      }
+    };
+
+    checkEmailStatus();
+    intervalId = setInterval(checkEmailStatus, 60000);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, []);
+
   // ✅ Determine if agency is viewing a child
   const isAgency = agencyClient?.isAgency || false;
-  // ✅ agencyClient uses 'id' not '_id'
   const agencyId = agencyClient?.id || agencyClient?._id || null;
 
   const isAgencyViewingChild = isAgency && 
@@ -119,18 +152,10 @@ export function DesktopSidebar() {
 
   // ✅ Determine which button to show (or none)
   const getButtonConfig = () => {
-    // Don't show if checking
     if (linkedinStatus.checking) return null;
-    
-    // Don't show if already connected
     if (linkedinStatus.connected) return null;
     
-    // ✅ Check if account needs reconnection
     if (linkedinStatus.needsReconnect && linkedinStatus.unipileAccountId) {
-      // Agency on own account - hide reconnect
-      //if (isAgency && !isAgencyViewingChild) return null;
-      
-      // Agency viewing child or regular client - show reconnect
       return {
         label: isAgencyViewingChild ? '🔄 Generate Reconnect Link' : '🔄 Reconnect LinkedIn',
         onClick: handleGenerateReconnectLink,
@@ -138,11 +163,7 @@ export function DesktopSidebar() {
       };
     }
     
-    // ✅ No account at all - show connect
     if (!linkedinStatus.unipileAccountId) {
-      // Agency on own account - hide connect
-      // if (isAgency && !isAgencyViewingChild) return null;
-      
       return {
         label: isAgencyViewingChild ? '🔗 Generate Connection Link' : '🔗 Connect LinkedIn',
         onClick: handleGenerateLink,
@@ -150,7 +171,6 @@ export function DesktopSidebar() {
       };
     }
     
-    // Fallback: no button
     return null;
   };
 
@@ -161,7 +181,6 @@ export function DesktopSidebar() {
 
     let targetClientId = null;
     
-    // If agency viewing child, use activeClientId
     if (isAgencyViewingChild) {
       targetClientId = activeClientId;
       console.log('📝 Agency viewing child - targetClientId:', targetClientId);
@@ -170,7 +189,7 @@ export function DesktopSidebar() {
       console.log('📝 Direct login - targetClientId:', targetClientId);
     }
     
-   if (!targetClientId || targetClientId === "undefined") {
+    if (!targetClientId || targetClientId === "undefined") {
       try {
         const storedClient = localStorage.getItem('client');
         if (storedClient) {
@@ -183,7 +202,6 @@ export function DesktopSidebar() {
     }
     
     if (!targetClientId || targetClientId === "undefined") {
-
       setLinkError('Unable to determine client. Please refresh and try again.');
       return;
     }
@@ -200,12 +218,10 @@ export function DesktopSidebar() {
       
       if (response.data.success) {
         if (isAgencyViewingChild) {
-          // ✅ Agency viewing child - show link in modal
           console.log('✅ Showing link in modal');
           setGeneratedLink(response.data.url);
           setShowLinkModal(true);
         } else {
-          // ✅ Child or regular client - redirect to Unipile
           console.log('✅ Redirecting to Unipile');
           window.location.href = response.data.url;
         }
@@ -248,7 +264,6 @@ export function DesktopSidebar() {
 
     let targetClientId = null;
     
-    // If agency viewing child, use activeClientId
     if (isAgencyViewingChild) {
       targetClientId = activeClientId;
       console.log('📝 Agency viewing child - targetClientId:', targetClientId);
@@ -270,7 +285,6 @@ export function DesktopSidebar() {
     }
     
     if (!targetClientId || targetClientId === "undefined") {
-
       setLinkError('Unable to determine client. Please refresh and try again.');
       return;
     }
@@ -287,12 +301,10 @@ export function DesktopSidebar() {
       
       if (response.data.success) {
         if (isAgencyViewingChild) {
-          // ✅ Agency viewing child - show link in modal
           console.log('✅ Showing reconnect link in modal');
           setGeneratedLink(response.data.url);
           setShowLinkModal(true);
         } else {
-          // ✅ Child or regular client - redirect to Unipile
           console.log('✅ Redirecting to Unipile for reconnect');
           window.location.href = response.data.url;
         }
@@ -324,6 +336,62 @@ export function DesktopSidebar() {
           console.error('Failed to copy:', err);
           setLinkError('Failed to copy link. Please copy it manually.');
         });
+    }
+  };
+
+  // ✅ ADDED: Handle email connect
+  const handleConnectEmail = async () => {
+    setIsConnectingEmail(true);
+    setEmailError(null);
+    try {
+      const response = await api.get('/auth/email/connect');
+      if (response.data?.connectionUrl) {
+        // Full-page redirect to Unipile hosted auth
+        window.location.href = response.data.connectionUrl;
+        return; // keep isConnectingEmail true — page is navigating away
+      }
+      setEmailError('No connection URL returned. Please try again.');
+    } catch (error) {
+      console.error('Error connecting email:', error);
+
+      const status = error.response?.status;
+      const code = error.response?.data?.error;
+
+      // 409 already_connected → just refresh and silently clear error
+      if (status === 409 && code === 'already_connected') {
+        try {
+          const st = await api.get('/auth/email/status');
+          setEmailStatus({
+            connected: !!st.data?.connected,
+            email: st.data?.email || null,
+            checking: false,
+          });
+        } catch (_) { /* ignore */ }
+        return;
+      }
+
+      setEmailError(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Failed to generate email connection link'
+      );
+    } finally {
+      setIsConnectingEmail(false);
+    }
+  };
+
+  // ✅ ADDED: Handle email disconnect
+  const handleDisconnectEmail = async () => {
+    if (!window.confirm('Disconnect your email account? This will pause all email campaigns.')) {
+      return;
+    }
+    setEmailError(null);
+    try {
+      await api.post('/auth/email/disconnect');
+      setEmailStatus({ connected: false, checking: false, email: null });
+    } catch (error) {
+      console.error('Error disconnecting email:', error);
+      setEmailError(error.response?.data?.error || 'Failed to disconnect email');
     }
   };
 
@@ -361,7 +429,6 @@ export function DesktopSidebar() {
   } else {
     allNavItems = [...navItems];
   }
-
 
   if (!isChildClient) {
     allNavItems.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
@@ -437,7 +504,77 @@ export function DesktopSidebar() {
           </div>
         )}
       </div>
-      
+
+      {/* ✅ ADDED: Email Status + Connect/Disconnect Button */}
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-500">📧 Email</span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                emailStatus.checking
+                  ? 'bg-gray-400 animate-pulse'
+                  : emailStatus.connected
+                  ? 'bg-green-500'
+                  : 'bg-red-500'
+              }`}
+            />
+            <span className="text-xs text-gray-600">
+              {emailStatus.checking
+                ? 'Checking...'
+                : emailStatus.connected
+                ? 'Connected ✅'
+                : 'Disconnected'}
+            </span>
+          </div>
+        </div>
+
+        {emailStatus.connected && emailStatus.email && (
+          <p
+            className="text-[10px] text-gray-400 mt-1 truncate"
+            title={emailStatus.email}
+          >
+            {emailStatus.email}
+          </p>
+        )}
+
+        {!emailStatus.checking && !emailStatus.connected && (
+          <div className="mt-2">
+            <button
+              onClick={handleConnectEmail}
+              disabled={isConnectingEmail}
+              className={`w-full text-xs py-1.5 px-3 rounded-lg transition-colors ${
+                isConnectingEmail
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700 text-white'
+              }`}
+            >
+              {isConnectingEmail ? (
+                <>
+                  <span className="inline-block animate-spin mr-1">⏳</span>
+                  Redirecting...
+                </>
+              ) : (
+                '📧 Connect Email'
+              )}
+            </button>
+          </div>
+        )}
+
+        {!emailStatus.checking && emailStatus.connected && (
+          <button
+            onClick={handleDisconnectEmail}
+            className="w-full mt-2 text-xs py-1 text-gray-500 hover:text-red-600 transition-colors"
+          >
+            Disconnect
+          </button>
+        )}
+
+        {emailError && (
+          <p className="text-xs text-red-500 mt-1">{emailError}</p>
+        )}
+      </div>
+
       <nav className="flex-1 p-4 space-y-1">
         {allNavItems.map((item) => {
           const active = isActive(item);

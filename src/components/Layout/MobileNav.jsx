@@ -17,9 +17,6 @@ const tabs = [
   { id: 'templates', icon: '📝', label: 'Templates', path: '/templates' }
 ];
 
-// ✅ Add blog tab
-
-
 const agencyTab = { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' };
 
 export function MobileNav() {
@@ -31,6 +28,12 @@ export function MobileNav() {
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
     checking: true
+  });
+
+  // ✅ ADDED: Email status state
+  const [emailStatus, setEmailStatus] = useState({
+    connected: false,
+    checking: true,
   });
 
   // Update display name when client or user changes
@@ -72,24 +75,40 @@ export function MobileNav() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // ✅ ADDED: Check email status
+  useEffect(() => {
+    const checkEmailStatus = async () => {
+      try {
+        const response = await api.get('/auth/email/status');
+        setEmailStatus({
+          connected: !!response.data?.connected,
+          checking: false,
+        });
+      } catch (error) {
+        console.error('Failed to check email status:', error);
+        setEmailStatus({ connected: false, checking: false });
+      }
+    };
+
+    checkEmailStatus();
+    const intervalId = setInterval(checkEmailStatus, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const isAgency = agencyClient?.isAgency || false;
 
   // ✅ Build tabs based on isChildClient from store
   let allTabs = [];
 
   if (isChildClient) {
-    // ✅ Child client - remove agents, ranking, about, blog
     allTabs = tabs.filter(item => 
       item.id !== 'agents' && 
       item.id !== 'ranking' && 
       item.id !== 'about'
     );
-    // ✅ Child clients can still see blog
   } else {
-    // ✅ Regular user or agency - show all
     allTabs = [...tabs];
     allTabs.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
-    // ✅ Add blog tab
   }
 
   if (isAgency) {
@@ -108,6 +127,10 @@ export function MobileNav() {
 
   const statusColor = linkedinStatus.checking ? 'bg-gray-400' : 
                       linkedinStatus.connected ? 'bg-green-500' : 'bg-red-500';
+
+  // ✅ ADDED: Email status color
+  const emailStatusColor = emailStatus.checking ? 'bg-gray-400' :
+                           emailStatus.connected ? 'bg-green-500' : 'bg-red-500';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-10">
@@ -134,7 +157,7 @@ export function MobileNav() {
         })}
       </div>
       
-      {/* Client name and LinkedIn Status */}
+      {/* Client name and channel status indicators */}
       <div className="absolute right-2 bottom-1.5 flex items-center gap-1.5 bg-white/90 px-1.5 py-0.5 rounded">
         <span className="text-[8px] text-gray-400 truncate max-w-[40px]" title={displayName}>
           {displayName}
@@ -142,6 +165,11 @@ export function MobileNav() {
         <span className="text-[8px] text-gray-400">🔗</span>
         <span 
           className={`w-1.5 h-1.5 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}
+        />
+        {/* ✅ ADDED: Email indicator */}
+        <span className="text-[8px] text-gray-400">📧</span>
+        <span 
+          className={`w-1.5 h-1.5 rounded-full ${emailStatusColor} ${emailStatus.checking ? 'animate-pulse' : ''}`}
         />
       </div>
     </nav>
