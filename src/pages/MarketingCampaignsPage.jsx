@@ -432,6 +432,56 @@ export function MarketingCampaignsPage() {
     }
   };
 
+  const handleEditMarketConnections = (campaign) => {
+    setEditingCampaign(campaign);
+    setMarketConnectionsForm({
+      name: campaign.name || '',
+      keywords: (campaign.keywords || []).join(', '),
+      messageTemplate: campaign.messageTemplate || '',
+      dailyLimit: campaign.dailyLimit || 50,
+      maxMessages: campaign.maxMessages ? String(campaign.maxMessages) : ''
+    });
+    setModalType('marketconnections');
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateMarketConnections = async (e) => {
+    e.preventDefault();
+
+    const keywords = marketConnectionsForm.keywords.split(',').map(k => k.trim()).filter(Boolean);
+
+    if (!marketConnectionsForm.name) {
+      showToast('Campaign name is required', 'error');
+      return;
+    }
+    if (keywords.length === 0) {
+      showToast('At least one keyword is required', 'error');
+      return;
+    }
+    if (!marketConnectionsForm.messageTemplate) {
+      showToast('Message template is required', 'error');
+      return;
+    }
+
+    const data = {
+      name: marketConnectionsForm.name,
+      keywords,
+      messageTemplate: marketConnectionsForm.messageTemplate,
+      dailyLimit: marketConnectionsForm.dailyLimit,
+      maxMessages: marketConnectionsForm.maxMessages ? parseInt(marketConnectionsForm.maxMessages) : null
+    };
+
+    const result = await campaignsService.updateMarketConnectionsCampaign(editingCampaign._id, data);
+    if (result.success) {
+      showToast('Campaign updated successfully', 'success');
+      setIsModalOpen(false);
+      resetMarketConnectionsForm();
+      await loadMarketConnectionsCampaigns();
+    } else {
+      showToast(result.error || 'Failed to update campaign', 'error');
+    }
+  };
+
   const resetMarketConnectionsForm = () => {
     setMarketConnectionsForm({
       name: '',
@@ -440,6 +490,7 @@ export function MarketingCampaignsPage() {
       dailyLimit: 50,
       maxMessages: ''
     });
+    setEditingCampaign(null);
   };
 
   // =====================================================
@@ -767,7 +818,7 @@ const handleSearchInfluencers = async () => {
         <div className="text-4xl mb-3">🔗</div>
         <p className="text-gray-500">No message to connections campaigns yet</p>
         <button
-          onClick={() => { setModalType('marketconnections'); setIsModalOpen(true); }}
+          onClick={() => { setModalType('marketconnections'); setEditingCampaign(null); setIsModalOpen(true); }}
           className="mt-3 btn-primary text-sm"
         >
           + Create Campaign
@@ -842,6 +893,12 @@ const handleSearchInfluencers = async () => {
                   className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   {campaign.status === 'active' ? '⏸️ Pause' : '▶️ Resume'}
+                </button>
+                <button
+                  onClick={() => handleEditMarketConnections(campaign)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  ✏️ Edit
                 </button>
                 <button
                   onClick={() => handleCompleteMarketConnections(campaign._id)}
@@ -1203,10 +1260,10 @@ const handleSearchInfluencers = async () => {
       <Modal
         isOpen={isModalOpen && modalType === 'marketconnections'}
         onClose={() => { setIsModalOpen(false); resetMarketConnectionsForm(); }}
-        title="Create Message to First Connections Campaign"
+        title={editingCampaign ? 'Edit Message to Connections Campaign' : 'Create Message to First Connections Campaign'}
         maxWidth="lg"
       >
-        <form onSubmit={handleMarketConnectionsSubmit} className="space-y-4">
+        <form onSubmit={editingCampaign ? handleUpdateMarketConnections : handleMarketConnectionsSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Campaign Name *
@@ -1294,7 +1351,7 @@ const handleSearchInfluencers = async () => {
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-gray-200">
-            <button type="submit" className="flex-1 btn-primary">Create Campaign</button>
+            <button type="submit" className="flex-1 btn-primary">{editingCampaign ? 'Update Campaign' : 'Create Campaign'}</button>
             <button type="button" onClick={() => { setIsModalOpen(false); resetMarketConnectionsForm(); }} className="btn-secondary">Cancel</button>
           </div>
         </form>
