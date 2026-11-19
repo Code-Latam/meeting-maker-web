@@ -82,6 +82,10 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   });
   const [editingDeal, setEditingDeal] = useState(null);
 
+  // Task form (attached to a deal)
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [taskForm, setTaskForm] = useState({ description: '', dueDate: '', dealId: '' });
+
   // Tabs
   const [activeTab, setActiveTab] = useState('gi');
 
@@ -541,6 +545,61 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     }
   };
 
+  // Mark a task complete
+  const handleMarkTaskComplete = async (task) => {
+    const updatedActions = (task.deal.actions || []).map((a, i) =>
+      i === task.index ? { ...a, status: 'completed' } : a
+    );
+    setSaving(true);
+    try {
+      const result = await crmService.updateDeal(task.deal._id, { actions: updatedActions });
+      if (result.success) {
+        showToast('Task marked complete', 'success');
+        await loadPersonData();
+      } else {
+        showToast(result.error || 'Failed to update task', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to update task', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Create a task attached to a deal
+  const handleCreateTask = async () => {
+    if (!taskForm.description.trim()) {
+      showToast('Task description is required', 'error');
+      return;
+    }
+    if (!taskForm.dealId) {
+      showToast('Select a deal for this task', 'error');
+      return;
+    }
+    const deal = deals.find((d) => d._id === taskForm.dealId);
+    if (!deal) {
+      showToast('Deal not found', 'error');
+      return;
+    }
+    const updatedActions = [...(deal.actions || []), { description: taskForm.description.trim(), dueDate: taskForm.dueDate || null, status: 'pending' }];
+    setSaving(true);
+    try {
+      const result = await crmService.updateDeal(deal._id, { actions: updatedActions });
+      if (result.success) {
+        showToast('Task added', 'success');
+        setTaskForm({ description: '', dueDate: '', dealId: '' });
+        setShowNewTask(false);
+        await loadPersonData();
+      } else {
+        showToast(result.error || 'Failed to add task', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to add task', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Get LinkedIn URL
   const getLinkedInUrl = () => {
     if (activity?.linkedinPublicId) {
@@ -554,7 +613,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   // Render loading state
   if (loading) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Loading..." maxWidth="lg">
+      <Modal isOpen={isOpen} onClose={onClose} title="Loading..." maxWidth="lg" closeOnOutsideClick={false}>
         <LoadingSpinner />
       </Modal>
     );
@@ -562,8 +621,33 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
 
   const linkedInUrl = getLinkedInUrl();
 
+  const pendingTasks = deals
+    .flatMap((deal) =>
+      (deal.actions || []).map((action, index) => ({ ...action, index, deal })).filter((a) => a.status === 'pending')
+    )
+    .sort((a, b) => {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    });
+
+  const formatTaskDate = (d) => {
+    if (!d) return 'No due date';
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? String(d).slice(0, 10) : dt.toLocaleDateString();
+  };
+
+  const isTaskOverdue = (d) => {
+    if (!d) return false;
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dt < today;
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={person?.fullName || activity?.personName || 'Person Details'} maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={person?.fullName || activity?.personName || 'Person Details'} maxWidth="lg" closeOnOutsideClick={false}>
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
         {/* Person Info */}
         <div className="bg-gray-50 rounded-lg p-3">
@@ -611,6 +695,14 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
             }`}
           >
             Deals ({deals.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              activeTab === 'tasks' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Tasks ({pendingTasks.length})
           </button>
           <button
             onClick={() => setActiveTab('funnels')}
@@ -1196,6 +1288,109 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                         notes: []
                       });
                     }}
+                    className="btn-secondary"
+                    disabled={saving}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TASKS TAB */}
+        {/* ============================================================ */}
+        {activeTab === 'tasks' && (
+          <div className="space-y-3">
+            {pendingTasks.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No pending tasks for this person.</p>
+              </div>
+            ) : (
+              pendingTasks.map((task, i) => {
+                const overdue = isTaskOverdue(task.dueDate);
+                return (
+                  <div key={i} className="bg-white rounded-lg border border-gray-200 p-3 flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{task.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">{task.deal.name}</p>
+                      <span className={`text-xs ${overdue ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                        {overdue ? 'Overdue: ' : 'Due: '}
+                        {formatTaskDate(task.dueDate)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleMarkTaskComplete(task)}
+                      disabled={saving}
+                      className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0"
+                    >
+                      Mark Complete
+                    </button>
+                  </div>
+                );
+              })
+            )}
+
+            {!showNewTask ? (
+              <button
+                onClick={() => setShowNewTask(true)}
+                disabled={saving || deals.length === 0}
+                className="w-full btn-secondary text-sm py-2 disabled:opacity-50"
+                title={deals.length === 0 ? 'Create a deal first to add tasks' : ''}
+              >
+                + Add Task
+              </button>
+            ) : (
+              <div className="border-t border-gray-200 pt-3 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Task Description *</label>
+                  <textarea
+                    value={taskForm.description}
+                    onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                    rows={3}
+                    className="input resize-y"
+                    placeholder="What needs to be done?"
+                    disabled={saving}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      value={taskForm.dueDate}
+                      onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                      className="input"
+                      disabled={saving}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Deal *</label>
+                    <select
+                      value={taskForm.dealId}
+                      onChange={(e) => setTaskForm({ ...taskForm, dealId: e.target.value })}
+                      className="input"
+                      disabled={saving}
+                    >
+                      <option value="">Select deal...</option>
+                      {deals.map((deal) => (
+                        <option key={deal._id} value={deal._id}>{deal.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCreateTask}
+                    disabled={saving}
+                    className="flex-1 btn-primary disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Save Task'}
+                  </button>
+                  <button
+                    onClick={() => { setShowNewTask(false); setTaskForm({ description: '', dueDate: '', dealId: '' }); }}
                     className="btn-secondary"
                     disabled={saving}
                   >

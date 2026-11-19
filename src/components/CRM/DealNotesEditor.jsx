@@ -48,23 +48,25 @@ export function DealNotesEditor({ notes = [], onChange }) {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <input
-          type="text"
+      <div className="space-y-2">
+        <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
+          rows={3}
           placeholder="Add a note..."
-          className="input flex-1"
+          className="input resize-y"
         />
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="input w-auto"
-        />
-        <button type="button" onClick={addNote} className="btn-secondary text-sm px-3 flex-shrink-0">
-          Add
-        </button>
+        <div className="flex gap-2">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="input w-auto"
+          />
+          <button type="button" onClick={addNote} className="btn-secondary text-sm px-3 flex-shrink-0">
+            Add
+          </button>
+        </div>
       </div>
     </div>
   );

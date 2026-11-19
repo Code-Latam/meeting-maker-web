@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { crmService } from '../../services/crm';
 import { useUIStore } from '../../store';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
+import { ActivityDetailModal } from '../Activity/ActivityDetailModal';
 
 // Person types that are considered "important" (excludes 'prospect')
 const IMPORTANT_TYPES = [
@@ -39,6 +40,7 @@ export function ImportantContacts() {
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState([]);
   const [columns, setColumns] = useState({});
+  const [selectedPerson, setSelectedPerson] = useState(null);
 
   // Load contacts
   const loadContacts = useCallback(async () => {
@@ -185,6 +187,23 @@ export function ImportantContacts() {
     return `${first} ${last}`.trim() || 'Unknown';
   };
 
+  // Open the person detail modal
+  const openPersonModal = (person) => {
+    const activity = {
+      personId: person._id,
+      person: person,
+      personName: person.fullName || `${person.firstName || ''} ${person.lastName || ''}`.trim(),
+      personTitle: person.title || '',
+      personCompany: person.companyName || '',
+      personType: person.personType || 'prospect',
+      assignedAgentId: person.assignedAgentId || null,
+      groupId: person.groupId || null,
+      channelPreference: person.channelPreference || 'linkedin',
+      channel: 'linkedin',
+    };
+    setSelectedPerson(activity);
+  };
+
   // Render contact card
   const renderContactCard = (contact, columnKey, isDealsColumn) => {
     const type = contact.personType || 'prospect';
@@ -199,11 +218,12 @@ export function ImportantContacts() {
     return (
       <div
         key={contact._id}
-        className={`bg-white rounded-lg border border-gray-200 p-3 mb-2 shadow-sm transition-all hover:shadow-md ${
-          !isDealsColumn ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-75'
+        className={`bg-white rounded-lg border border-gray-200 p-3 mb-2 shadow-sm transition-all hover:shadow-md cursor-pointer ${
+          !isDealsColumn ? '' : 'opacity-75'
         }`}
         draggable={!isDealsColumn}
         onDragStart={(e) => handleDragStart(e, contact._id, columnKey, type)}
+        onClick={() => openPersonModal(contact)}
       >
         <div className="font-semibold text-sm text-gray-800">{name}</div>
         {title && <div className="text-xs text-gray-500">{title}</div>}
@@ -213,6 +233,7 @@ export function ImportantContacts() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               window.open(linkedinUrl, '_blank');
             }}
             className="text-xs text-blue-600 hover:underline block mt-1"
@@ -377,6 +398,14 @@ export function ImportantContacts() {
         .type-influencer { background: #ede9fe; color: #5b21b6; }
         .type-person_of_interest { background: #fef3c7; color: #92400e; }
       `}</style>
+
+      {selectedPerson && (
+        <ActivityDetailModal
+          isOpen={!!selectedPerson}
+          activity={selectedPerson}
+          onClose={() => setSelectedPerson(null)}
+        />
+      )}
     </div>
   );
 }
