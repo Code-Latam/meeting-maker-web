@@ -19,7 +19,7 @@ export function BoostStatus() {
   };
 
   const handleRefresh = async () => {
-    const result = await refreshStatus(post.id);
+    const result = await refreshStatus();
     if (result.success) {
       showToast('🔄 Status updated', 'success');
     } else {

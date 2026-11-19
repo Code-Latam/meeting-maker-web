@@ -28,7 +28,7 @@ export const useBoostStore = create((set, get) => ({
     const result = await boostService.submitPost(postUrl, isOwnPost);
     if (result.success) {
       set({ 
-        post: result.post,
+        post: result.post.post,
         isSubmitting: false 
       });
     } else {
@@ -50,9 +50,9 @@ export const useBoostStore = create((set, get) => ({
   },
 
   // Refresh post status
-  refreshStatus: async (postId) => {
+  refreshStatus: async () => {
     set({ isLoading: true, error: null });
-    const result = await boostService.refreshStatus(postId);
+    const result = await boostService.refreshStatus();
     if (result.success) {
       set({ post: result.post, isLoading: false });
     } else {

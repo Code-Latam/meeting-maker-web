@@ -43,11 +43,12 @@ export const boostService = {
     }
   },
 
-  // Refresh post status
-  async refreshStatus(postId) {
+  // Refresh post status (re-fetches today's post)
+  async refreshStatus() {
     try {
-      const response = await api.get(`/linkedin/boosted-post/${postId}`);
-      return { success: true, post: response.data };
+      const response = await api.get('/linkedin/boosted-post');
+      const data = response.data;
+      return { success: true, post: data.hasPost ? data.post : null };
     } catch (error) {
       return {
         success: false,
