@@ -7,7 +7,6 @@ import {
   Newspaper,
   Rocket,
   TrendingUp,
-  LayoutTemplate,
   Info,
   Landmark,
 } from 'lucide-react';
@@ -18,10 +17,10 @@ export const navItems = [
   { id: 'conversions', icon: Target, label: 'Conversions', path: '/conversions' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { id: 'crm', icon: Building2, label: 'CRM', path: '/crm' },
-  { id: 'blog', icon: Newspaper, label: 'Blog & Post', path: '/blog' },
   { id: 'boost', icon: Rocket, label: 'Boost', path: '/boost' },
+  { id: 'blog', icon: Newspaper, label: 'Blog & Post', path: '/blog' },
   { id: 'ranking', icon: TrendingUp, label: 'Ranking', path: '/ranking' },
-  { id: 'templates', icon: LayoutTemplate, label: 'Templates', path: '/templates' },
+  // { id: 'templates', icon: LayoutTemplate, label: 'Templates', path: '/templates' },
   { id: 'about', icon: Info, label: 'About', path: '/about' },
 ];
 
