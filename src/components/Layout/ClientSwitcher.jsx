@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore, useAppStore } from '../../store';
 import { api, setActiveClient, clearActiveClient } from '../../services/api';
+import { Building2, ChevronDown, Check, Folder } from 'lucide-react';
 
 export function ClientSwitcher() {
   const { agencyClient } = useAuthStore();
@@ -14,13 +15,13 @@ export function ClientSwitcher() {
 
   const fetchClients = async () => {
     if (!agencyClient) return;
-    
+
     try {
       setIsLoading(true);
       const response = await api.get('/auth/agency/children');
-      
+
       const children = response.data.children || [];
-      
+
       const allClients = [
         {
           _id: agencyClient._id,
@@ -29,7 +30,7 @@ export function ClientSwitcher() {
           isAgency: true,
           isParent: true,
         },
-        ...children.map(c => ({
+        ...children.map((c) => ({
           _id: c._id,
           name: c.name || c.email,
           email: c.email,
@@ -37,12 +38,12 @@ export function ClientSwitcher() {
           status: c.status,
           isAgency: false,
           isParent: false,
-        }))
+        })),
       ];
-      
+
       setAccessibleClients(allClients);
-    } catch (error) {
-      console.error('❌ Failed to fetch clients:', error);
+    } catch {
+      // keep previous list on error
     } finally {
       setIsLoading(false);
     }
@@ -54,14 +55,12 @@ export function ClientSwitcher() {
     }
   }, [isAgency, agencyClient]);
 
-  // Auto-select agency client if no active client is set
   useEffect(() => {
     if (activeClientId === null && accessibleClients.length > 0 && !isLoading) {
-      const agencyClientOption = accessibleClients.find(c => c.isParent);
+      const agencyClientOption = accessibleClients.find((c) => c.isParent);
       if (agencyClientOption) {
         setActiveClientId(agencyClientOption._id);
         setActiveClient(agencyClientOption._id);
-        // ✅ Save to localStorage
         localStorage.setItem('activeClientId', agencyClientOption._id);
         localStorage.setItem('activeClientName', agencyClientOption.name);
       }
@@ -83,51 +82,41 @@ export function ClientSwitcher() {
     return null;
   }
 
-  const currentClient = accessibleClients.find(c => c._id === activeClientId);
+  const currentClient = accessibleClients.find((c) => c._id === activeClientId);
 
   const handleClientSwitch = (clientId) => {
-    console.log('🔄 Switching to client:', clientId);
-    
-    const selectedClient = accessibleClients.find(c => c._id === clientId);
-    
+    const selectedClient = accessibleClients.find((c) => c._id === clientId);
+
     if (selectedClient?.isParent) {
-      // Switching to agency
-      console.log('🔄 Switching to agency');
       setActiveClientId(null);
       clearActiveClient();
-      // ✅ Save agency info
       localStorage.setItem('activeClientId', selectedClient._id);
       localStorage.setItem('activeClientName', selectedClient.name);
-      // Update client in store
-      useAuthStore.setState({ 
+      useAuthStore.setState({
         client: {
           ...useAuthStore.getState().client,
           _id: selectedClient._id,
           name: selectedClient.name,
           email: selectedClient.email,
           isAgency: true,
-        }
+        },
       });
     } else {
-      // Switching to child client
-      console.log('🔄 Switching to child:', selectedClient?.name);
       setActiveClientId(clientId);
       setActiveClient(clientId);
-      // ✅ Save child info
       localStorage.setItem('activeClientId', clientId);
       localStorage.setItem('activeClientName', selectedClient?.name || '');
-      // Update client in store
-      useAuthStore.setState({ 
+      useAuthStore.setState({
         client: {
           ...useAuthStore.getState().client,
           _id: selectedClient._id,
           name: selectedClient.name,
           email: selectedClient.email,
           isAgency: false,
-        }
+        },
       });
     }
-    
+
     setIsOpen(false);
     window.location.href = '/';
   };
@@ -136,50 +125,45 @@ export function ClientSwitcher() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="flex items-center gap-2 px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
       >
-        <span className="text-gray-500">🏢</span>
-        <span className="font-medium text-gray-700 truncate max-w-[120px]">
+        <Building2 size={16} className="text-gray-400" />
+        <span className="font-medium text-gray-700 truncate max-w-[140px]">
           {currentClient?.name || currentClient?.email || 'Select Client'}
         </span>
-        <svg 
-          className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[220px] z-50 max-h-[300px] overflow-y-auto">
-          <div className="p-1">
-            {accessibleClients.map((c) => {
-              const isActive = c._id === activeClientId;
-              return (
-                <button
-                  key={c._id}
-                  onClick={() => handleClientSwitch(c._id)}
-                  className={`w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors flex items-center justify-between ${
-                    isActive 
-                      ? 'bg-primary-50 text-primary-700 font-medium' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex flex-col min-w-0">
-                    <span className="truncate">{c.name || c.email}</span>
-                    <span className="text-xs text-gray-400 truncate">
-                      {c.isParent ? '🏢 Agency' : `📁 ${c.email || ''}`}
-                    </span>
-                  </div>
-                  {isActive && (
-                    <span className="text-primary-500 flex-shrink-0 ml-2">✓</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[220px] z-50 max-h-[300px] overflow-y-auto p-1">
+          {accessibleClients.map((c) => {
+            const isActive = c._id === activeClientId;
+            return (
+              <button
+                key={c._id}
+                onClick={() => handleClientSwitch(c._id)}
+                title={c.email || ''}
+                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between gap-2 ${
+                  isActive
+                    ? 'bg-gray-100 text-gray-900 font-medium'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="text-gray-400 flex-shrink-0">
+                    {c.isParent ? <Building2 size={16} /> : <Folder size={16} />}
+                  </span>
+                  <span className="truncate">{c.name || c.email}</span>
+                </span>
+                {isActive && (
+                  <Check size={16} className="text-primary-600 flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

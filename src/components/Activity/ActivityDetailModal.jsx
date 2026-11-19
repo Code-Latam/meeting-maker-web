@@ -612,7 +612,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               <select
                 value={personType}
                 onChange={(e) => setPersonType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               >
                 <option value="prospect">Prospect</option>
@@ -644,7 +644,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     setGroups([]);
                   }
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               >
                 <option value="">-- No agent --</option>
@@ -735,7 +735,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               <select
                 value={channelPreference}
                 onChange={(e) => setChannelPreference(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               >
                 <option value="linkedin">LinkedIn</option>
@@ -770,7 +770,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               <select
                 value={linkedinState}
                 onChange={(e) => setLinkedinState(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               >
                 <option value="open">Open</option>
@@ -794,7 +794,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                 value={linkedinReason}
                 onChange={(e) => setLinkedinReason(e.target.value)}
                 placeholder="Optional reason"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               />
             </div>
@@ -830,7 +830,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
                 placeholder="No email address"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               />
             </div>
@@ -840,7 +840,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               <select
                 value={emailState}
                 onChange={(e) => setEmailState(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               >
                 <option value="">-- No state --</option>
@@ -862,7 +862,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                 value={emailReason}
                 onChange={(e) => setEmailReason(e.target.value)}
                 placeholder="Optional reason"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={saving}
               />
             </div>
@@ -1075,7 +1075,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     type="text"
                     value={dealForm.name}
                     onChange={(e) => setDealForm({ ...dealForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="input"
                     placeholder="Enter deal name"
                     disabled={saving}
                   />
@@ -1087,7 +1087,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                       type="number"
                       value={dealForm.size}
                       onChange={(e) => setDealForm({ ...dealForm, size: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                      className="input"
                       placeholder="0"
                       min="0"
                       disabled={saving}
@@ -1098,7 +1098,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     <select
                       value={dealForm.stage}
                       onChange={(e) => setDealForm({ ...dealForm, stage: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                      className="input"
                       disabled={saving}
                     >
                       <option value="lead">Lead</option>
@@ -1115,7 +1115,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     <select
                       value={dealForm.dealType}
                       onChange={(e) => setDealForm({ ...dealForm, dealType: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                      className="input"
                       disabled={saving}
                     >
                       <option value="">None</option>
@@ -1146,7 +1146,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     type="date"
                     value={dealForm.expectedCloseDate}
                     onChange={(e) => setDealForm({ ...dealForm, expectedCloseDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="input"
                     disabled={saving}
                   />
                 </div>
@@ -1156,7 +1156,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     value={dealForm.description}
                     onChange={(e) => setDealForm({ ...dealForm, description: e.target.value })}
                     rows="2"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+                    className="input resize-y"
                     placeholder="Deal description (optional)"
                     disabled={saving}
                   />

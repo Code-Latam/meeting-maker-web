@@ -1,176 +1,31 @@
-// src/components/Layout/MobileNav.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useUIStore, useAuthStore } from '../../store';
-import { api } from '../../services/api';
-
-const tabs = [
-  { id: 'agents', icon: '🤖', label: 'Agents', path: '/' },
-  { id: 'activity', icon: '📋', label: 'Activity', path: '/activity' },
-  { id: 'conversions', icon: '🎯', label: 'Conversions', path: '/conversions' },
-  { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard' },
-  { id: 'crm', icon: '🏢', label: 'CRM', path: '/crm' },
-  { id: 'blog', icon: '📝', label: 'Blog', path: '/blog' },
-  { id: 'boost', icon: '🚀', label: 'Boost', path: '/boost' },
-  { id: 'ranking', icon: '📈', label: 'Ranking', path: '/ranking' },
-  { id: 'templates', icon: '📝', label: 'Templates', path: '/templates' }
-];
-
-const agencyTab = { id: 'agency', icon: '🏢', label: 'Agency', path: '/agency' };
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { useAuthStore } from '../../store';
+import { filterNavItems } from './navItems';
 
 export function MobileNav() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { setActiveTab } = useUIStore();
-  const { user, client, agencyClient, isChildClient } = useAuthStore();
-  const [displayName, setDisplayName] = useState('User');
-  const [linkedinStatus, setLinkedinStatus] = useState({
-    connected: false,
-    checking: true
-  });
-
-  // ✅ ADDED: Email status state
-  const [emailStatus, setEmailStatus] = useState({
-    connected: false,
-    checking: true,
-  });
-
-  // Update display name when client or user changes
-  useEffect(() => {
-    const getClientName = () => {
-      if (client?.name) return client.name;
-      if (client?.client?.name) return client.client.name;
-      if (user?.client?.name) return user.client.name;
-      return null;
-    };
-
-    const clientName = getClientName();
-    const newDisplayName = clientName || user?.email || 'User';
-    setDisplayName(newDisplayName);
-  }, [client, user]);
-
-  // Check LinkedIn status
-  useEffect(() => {
-    const checkLinkedInStatus = async () => {
-      try {
-        const response = await api.get('/api/activity/linkedin-status');
-        if (response.data) {
-          setLinkedinStatus({
-            connected: response.data.connected || false,
-            checking: false
-          });
-        }
-      } catch (error) {
-        console.error('Failed to check LinkedIn status:', error);
-        setLinkedinStatus({
-          connected: false,
-          checking: false
-        });
-      }
-    };
-
-    checkLinkedInStatus();
-    const intervalId = setInterval(checkLinkedInStatus, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // ✅ ADDED: Check email status
-  useEffect(() => {
-    const checkEmailStatus = async () => {
-      try {
-        const response = await api.get('/auth/email/status');
-        setEmailStatus({
-          connected: !!response.data?.connected,
-          checking: false,
-        });
-      } catch (error) {
-        console.error('Failed to check email status:', error);
-        setEmailStatus({ connected: false, checking: false });
-      }
-    };
-
-    checkEmailStatus();
-    const intervalId = setInterval(checkEmailStatus, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
-
+  const { agencyClient, isChildClient } = useAuthStore();
   const isAgency = agencyClient?.isAgency || false;
-
-  // ✅ Build tabs based on isChildClient from store
-  let allTabs = [];
-
-  if (isChildClient) {
-    allTabs = tabs.filter(item => 
-      item.id !== 'agents' && 
-      item.id !== 'ranking' && 
-      item.id !== 'about'
-    );
-  } else {
-    allTabs = [...tabs];
-    allTabs.push({ id: 'about', icon: 'ℹ️', label: 'About', path: '/about' });
-  }
-
-  if (isAgency) {
-    allTabs.push(agencyTab);
-  }
-
-  const handleTabClick = (tab) => {
-    setActiveTab(tab.id);
-    navigate(tab.path);
-  };
-
-  const isActive = (tab) => {
-    if (tab.id === 'agents' && location.pathname === '/') return true;
-    return location.pathname === tab.path;
-  };
-
-  const statusColor = linkedinStatus.checking ? 'bg-gray-400' : 
-                      linkedinStatus.connected ? 'bg-green-500' : 'bg-red-500';
-
-  // ✅ ADDED: Email status color
-  const emailStatusColor = emailStatus.checking ? 'bg-gray-400' :
-                           emailStatus.connected ? 'bg-green-500' : 'bg-red-500';
+  const items = filterNavItems({ isChildClient, isAgency });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-10">
-      <div className="flex justify-around items-center py-1.5 max-w-md mx-auto">
-        {allTabs.map((tab) => {
-          const active = isActive(tab);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabClick(tab)}
-              className={`flex flex-col items-center p-1 min-w-[36px] transition-colors ${
-                active ? 'text-primary-600' : 'text-gray-500'
-              }`}
-              title={tab.label}
-            >
-              <span className="text-xl leading-none">{tab.icon}</span>
-              {active && (
-                <span className="text-[8px] mt-0.5 font-medium">
-                  {tab.label}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      
-      {/* Client name and channel status indicators */}
-      <div className="absolute right-2 bottom-1.5 flex items-center gap-1.5 bg-white/90 px-1.5 py-0.5 rounded">
-        <span className="text-[8px] text-gray-400 truncate max-w-[40px]" title={displayName}>
-          {displayName}
-        </span>
-        <span className="text-[8px] text-gray-400">🔗</span>
-        <span 
-          className={`w-1.5 h-1.5 rounded-full ${statusColor} ${linkedinStatus.checking ? 'animate-pulse' : ''}`}
-        />
-        {/* ✅ ADDED: Email indicator */}
-        <span className="text-[8px] text-gray-400">📧</span>
-        <span 
-          className={`w-1.5 h-1.5 rounded-full ${emailStatusColor} ${emailStatus.checking ? 'animate-pulse' : ''}`}
-        />
+    <nav className="fixed bottom-0 left-0 right-0 z-10 bg-white/95 backdrop-blur border-t border-gray-200 safe-bottom">
+      <div className="flex items-stretch overflow-x-auto max-w-md mx-auto py-1 px-1">
+        {items.map((item) => (
+          <NavLink
+            key={item.id}
+            to={item.path}
+            end={item.path === '/'}
+            className={({ isActive }) =>
+              `flex-shrink-0 flex flex-col items-center justify-center gap-0.5 min-w-[56px] px-1 py-1.5 rounded-xl transition-colors ${
+                isActive ? 'text-primary-600' : 'text-gray-400 hover:text-gray-600'
+              }`
+            }
+          >
+            <item.icon size={22} strokeWidth={1.75} />
+            <span className="text-[10px] font-medium leading-none">{item.label}</span>
+          </NavLink>
+        ))}
       </div>
     </nav>
   );

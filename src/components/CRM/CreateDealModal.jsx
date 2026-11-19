@@ -135,7 +135,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               value={searchQuery}
               onChange={handleSearchInput}
               placeholder="Type person name to search..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               autoComplete="off"
             />
             {searchResults.length > 0 && (
@@ -198,7 +198,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., Enterprise Contract"
               disabled={!selectedPerson}
             />
@@ -210,7 +210,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+              className="input resize-y"
               placeholder="Deal details..."
               disabled={!selectedPerson}
             />
@@ -223,7 +223,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
                 type="number"
                 value={formData.dealSize}
                 onChange={(e) => setFormData(prev => ({ ...prev, dealSize: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 placeholder="0"
                 min="0"
                 step="0.01"
@@ -235,7 +235,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               <select
                 value={formData.dealType}
                 onChange={(e) => setFormData(prev => ({ ...prev, dealType: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={!selectedPerson}
               >
                 <option value="">None</option>
@@ -254,7 +254,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               <select
                 value={formData.stage}
                 onChange={(e) => setFormData(prev => ({ ...prev, stage: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 disabled={!selectedPerson}
               >
                 <option value="lead">Lead</option>
@@ -289,7 +289,7 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               type="date"
               value={formData.expectedCloseDate}
               onChange={(e) => setFormData(prev => ({ ...prev, expectedCloseDate: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               disabled={!selectedPerson}
             />
           </div>

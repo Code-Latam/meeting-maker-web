@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useUIStore } from '../../store';
+import { X } from 'lucide-react';
 
 export function Modal({ 
   isOpen, 
@@ -56,12 +57,12 @@ export function Modal({
         <div className={`bg-white rounded-2xl shadow-2xl ${maxWidthClasses[maxWidth] || maxWidthClasses.md} w-full max-h-[90vh] flex flex-col`}>
           {title && (
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-              <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+              <h3 className="text-base font-semibold text-gray-900">{title}</h3>
               <button
                 onClick={onClose}
                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
           )}
@@ -91,12 +92,12 @@ export function Modal({
         </div>
         {title && (
           <div className="px-6 py-3 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
             <button
               onClick={onClose}
               className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
             >
-              ✕
+              <X size={18} />
             </button>
           </div>
         )}

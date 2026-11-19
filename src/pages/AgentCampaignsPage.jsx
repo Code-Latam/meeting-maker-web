@@ -1000,7 +1000,7 @@ export function AgentCampaignsPage() {
               type="text"
               value={aiFormData.name}
               onChange={(e) => handleAiFormChange('name', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., AI Outreach Campaign"
               required
             />
@@ -1013,7 +1013,7 @@ export function AgentCampaignsPage() {
             <select
               value={aiFormData.channel}
               onChange={(e) => handleAiFormChange('channel', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             >
               <option value="linkedin">🔗 LinkedIn</option>
               <option value="email">📧 Email</option>
@@ -1033,7 +1033,7 @@ export function AgentCampaignsPage() {
               onChange={(e) => handleAiFormChange('dailyLimit', e.target.value)}
               min="1"
               max="30"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               required
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -1074,7 +1074,7 @@ export function AgentCampaignsPage() {
               type="text"
               value={aiEditFormData.name}
               onChange={(e) => handleAiEditFormChange('name', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., AI Outreach Campaign"
               required
             />
@@ -1087,7 +1087,7 @@ export function AgentCampaignsPage() {
             <select
               value={aiEditFormData.channel}
               onChange={(e) => handleAiEditFormChange('channel', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             >
               <option value="linkedin">🔗 LinkedIn</option>
               <option value="email">📧 Email</option>
@@ -1107,7 +1107,7 @@ export function AgentCampaignsPage() {
               onChange={(e) => handleAiEditFormChange('dailyLimit', e.target.value)}
               min="1"
               max="30"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               required
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -1148,7 +1148,7 @@ export function AgentCampaignsPage() {
               type="text"
               value={searchFormData.name}
               onChange={(e) => handleSearchFormChange('name', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., SaaS Sales Leaders Q2"
               required
             />
@@ -1165,7 +1165,7 @@ export function AgentCampaignsPage() {
                 handleSearchFormChange('channel', channel);
                 handleSearchFormChange('dailyLimit', channel === 'email' ? 200 : 30);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             >
               <option value="linkedin">🔗 LinkedIn</option>
               <option value="email">📧 Email</option>
@@ -1182,7 +1182,7 @@ export function AgentCampaignsPage() {
               onChange={(e) => handleSearchFormChange('dailyLimit', parseInt(e.target.value) || 0)}
               min="1"
               max={searchFormData.channel === 'email' ? 200 : 30}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             />
             <p className="text-xs text-gray-500 mt-1">
               {searchFormData.channel === 'email' ? 'Max 200 leads/day' : 'Max 30 leads/day'}
@@ -1197,7 +1197,7 @@ export function AgentCampaignsPage() {
               type="text"
               value={searchFormData.keywords}
               onChange={(e) => handleSearchFormChange('keywords', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., sales director, VP of sales, head of growth"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -1296,7 +1296,7 @@ export function AgentCampaignsPage() {
               value={searchFormData.minConnections}
               onChange={(e) => handleSearchFormChange('minConnections', parseInt(e.target.value) || 0)}
               min="0"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., 500"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -1311,7 +1311,7 @@ export function AgentCampaignsPage() {
             <select
               value={searchFormData.connectionDegree}
               onChange={(e) => handleSearchFormChange('connectionDegree', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             >
               <option value="1">1st Degree (Already connected)</option>
               <option value="2">2nd Degree (Mutual connections)</option>
@@ -1420,7 +1420,7 @@ export function AgentCampaignsPage() {
               type="text"
               value={postFormData.name}
               onChange={(e) => setPostFormData({ ...postFormData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., Viral AI Post - March 2025"
               required
             />
@@ -1433,7 +1433,7 @@ export function AgentCampaignsPage() {
             <select
               value={postFormData.channelPreference}
               onChange={(e) => setPostFormData({ ...postFormData, channelPreference: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             >
               <option value="linkedin">🔗 LinkedIn</option>
               <option value="email">📧 Email</option>
@@ -1449,7 +1449,7 @@ export function AgentCampaignsPage() {
               type="url"
               value={postFormData.postUrl}
               onChange={(e) => setPostFormData({ ...postFormData, postUrl: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="https://www.linkedin.com/feed/update/urn:li:activity:123456789/"
               required
             />
@@ -1466,7 +1466,7 @@ export function AgentCampaignsPage() {
               onChange={(e) => setPostFormData({ ...postFormData, dailyLimit: parseInt(e.target.value) || 0 })}
               min="1"
               max="500"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             />
             <p className="text-xs text-gray-500 mt-1">Maximum leads to add per day (1-500)</p>
           </div>

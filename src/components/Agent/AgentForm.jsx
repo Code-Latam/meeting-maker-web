@@ -228,7 +228,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           type="text"
           value={formData.name}
           onChange={(e) => handleChange('name', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
           placeholder="e.g., John's SDR Agent"
           required
         />
@@ -239,7 +239,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         <select
           value={formData.role}
           onChange={(e) => handleChange('role', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
           required
         >
           <option value="">Select a role</option>
@@ -281,7 +281,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           value={formData.persona}
           onChange={(e) => handleChange('persona', e.target.value)}
           rows={6}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+          className="input resize-y"
           placeholder="Describe the agent's persona, expertise, and approach..."
           required
         />
@@ -344,7 +344,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         <select
           value={formData.tone}
           onChange={(e) => handleChange('tone', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
         >
           <option value="professional">Professional</option>
           <option value="friendly">Friendly</option>
@@ -359,7 +359,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
         <select
           value={formData.primaryGoal.type}
           onChange={(e) => handlePrimaryGoalChange('type', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
           required
         >
           <option value="">Select goal type</option>
@@ -380,7 +380,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           type="text"
           value={formData.primaryGoal.label}
           onChange={(e) => handlePrimaryGoalChange('label', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
           placeholder="e.g., Schedule a discovery call"
           required
         />
@@ -394,7 +394,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           type="url"
           value={formData.primaryGoal.fulfillmentLink}
           onChange={(e) => handlePrimaryGoalChange('fulfillmentLink', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
           placeholder="https://calendly.com/..."
         />
       </div>
@@ -407,7 +407,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           value={formData.emailSignature}
           onChange={(e) => handleChange('emailSignature', e.target.value)}
           rows={4}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+          className="input resize-y"
           placeholder="Best regards,&#10;John Doe&#10;Founder, Company Name&#10;https://www.yourdomain.com"
         />
         <p className="text-xs text-gray-500 mt-1">
@@ -424,7 +424,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           value={formData.maxFollowUps}
           onChange={(e) => handleChange('maxFollowUps', parseInt(e.target.value) || 0)}
           min="0"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
         />
         <p className="text-xs text-gray-500 mt-1">
           Number of follow-up messages after the initial contact.
@@ -441,7 +441,7 @@ export function AgentForm({ agent, onClose, onSuccess }) {
           onChange={(e) => handleChange('followUpDays', parseFloat(e.target.value) || 0)}
           min="0"
           step="0.5"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className="input"
         />
         <p className="text-xs text-gray-500 mt-1">
           Days to wait before sending a follow-up when no reply.

@@ -17,7 +17,7 @@ export function Toast() {
     success: 'bg-green-500',
     error: 'bg-red-500',
     warning: 'bg-yellow-500',
-    info: 'bg-blue-500',
+    info: 'bg-primary-600',
   }[toast.type] || 'bg-gray-800';
 
   return (

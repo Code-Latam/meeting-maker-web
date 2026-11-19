@@ -1010,7 +1010,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={keywordForm.name}
               onChange={(e) => setKeywordForm({ ...keywordForm, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., AI Automation Posts"
               required
             />
@@ -1024,7 +1024,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={keywordForm.keywords}
               onChange={(e) => setKeywordForm({ ...keywordForm, keywords: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., AI automation, lead generation, sales tips"
             />
             <p className="text-xs text-gray-500 mt-1">Separate keywords with commas. Posts matching any keyword will be found.</p>
@@ -1041,7 +1041,7 @@ const handleSearchInfluencers = async () => {
                 onChange={(e) => setKeywordForm({ ...keywordForm, maxAgeDays: parseInt(e.target.value) || 7 })}
                 min="1"
                 max="30"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
               />
               <p className="text-xs text-gray-500 mt-1">Only posts from the last X days</p>
             </div>
@@ -1054,7 +1054,7 @@ const handleSearchInfluencers = async () => {
                 value={keywordForm.minComments}
                 onChange={(e) => setKeywordForm({ ...keywordForm, minComments: parseInt(e.target.value) || 50 })}
                 min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
               />
               <p className="text-xs text-gray-500 mt-1">Minimum comments to qualify as viral</p>
             </div>
@@ -1070,7 +1070,7 @@ const handleSearchInfluencers = async () => {
               onChange={(e) => setKeywordForm({ ...keywordForm, dailyLimit: parseInt(e.target.value) || 50 })}
               min="1"
               max="500"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             />
             <p className="text-xs text-gray-500 mt-1">Max posts to engage per day</p>
           </div>
@@ -1109,7 +1109,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={influencerForm.name}
               onChange={(e) => setInfluencerForm({ ...influencerForm, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., Industry Leaders"
               required
             />
@@ -1123,7 +1123,7 @@ const handleSearchInfluencers = async () => {
               value={influencerForm.influencerUrls}
               onChange={(e) => setInfluencerForm({ ...influencerForm, influencerUrls: e.target.value })}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+              className="input resize-y"
               placeholder="https://www.linkedin.com/in/username/&#10;https://www.linkedin.com/company/companyname/"
             />
             <p className="text-xs text-gray-500 mt-1">One URL per line. Supports personal profiles and company pages.</p>
@@ -1146,7 +1146,7 @@ const handleSearchInfluencers = async () => {
               onChange={(e) => setInfluencerForm({ ...influencerForm, dailyLimit: parseInt(e.target.value) || 50 })}
               min="1"
               max="500"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             />
             <p className="text-xs text-gray-500 mt-1">Max posts to engage per day</p>
           </div>
@@ -1187,7 +1187,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={commentReplyForm.name}
               onChange={(e) => setCommentReplyForm({ ...commentReplyForm, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., Engage My Audience"
               required
             />
@@ -1201,7 +1201,7 @@ const handleSearchInfluencers = async () => {
               type="url"
               value={commentReplyForm.ownProfileUrl}
               onChange={(e) => setCommentReplyForm({ ...commentReplyForm, ownProfileUrl: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="https://www.linkedin.com/in/yourusername/"
               required
             />
@@ -1218,7 +1218,7 @@ const handleSearchInfluencers = async () => {
               onChange={(e) => setCommentReplyForm({ ...commentReplyForm, maxAgeDays: parseInt(e.target.value) || 7 })}
               min="1"
               max="30"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             />
             <p className="text-xs text-gray-500 mt-1">Only process posts from the last X days</p>
           </div>
@@ -1233,7 +1233,7 @@ const handleSearchInfluencers = async () => {
               onChange={(e) => setCommentReplyForm({ ...commentReplyForm, dailyLimit: parseInt(e.target.value) || 50 })}
               min="1"
               max="500"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
             />
             <p className="text-xs text-gray-500 mt-1">Max comment replies per day</p>
           </div>
@@ -1272,7 +1272,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={marketConnectionsForm.name}
               onChange={(e) => setMarketConnectionsForm({ ...marketConnectionsForm, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., Product Launch Outreach"
               required
             />
@@ -1287,7 +1287,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={marketConnectionsForm.keywords}
               onChange={(e) => setMarketConnectionsForm({ ...marketConnectionsForm, keywords: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., CEO, Founder, Marketing Director, Sales"
             />
             <p className="text-xs text-gray-500 mt-1">Separate keywords with commas. These will be used to search your first-level connections.</p>
@@ -1301,7 +1301,7 @@ const handleSearchInfluencers = async () => {
               value={marketConnectionsForm.messageTemplate}
               onChange={(e) => setMarketConnectionsForm({ ...marketConnectionsForm, messageTemplate: e.target.value })}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+              className="input resize-y"
               placeholder="Hi {name}, I noticed you're a {title} at {company}. I'd love to connect and discuss..."
             />
             <p className="text-xs text-gray-500 mt-1">Use {'{name}'}, {'{title}'}, {'{company}'} as placeholders. These will be replaced with the recipient's info.</p>
@@ -1318,7 +1318,7 @@ const handleSearchInfluencers = async () => {
                 onChange={(e) => setMarketConnectionsForm({ ...marketConnectionsForm, dailyLimit: parseInt(e.target.value) || 50 })}
                 min="1"
                 max="500"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
               />
               <p className="text-xs text-gray-500 mt-1">Max messages to send per day (LinkedIn limits apply)</p>
             </div>
@@ -1332,7 +1332,7 @@ const handleSearchInfluencers = async () => {
                 onChange={(e) => setMarketConnectionsForm({ ...marketConnectionsForm, maxMessages: e.target.value })}
                 min="1"
                 max="10000"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
                 placeholder="Unlimited"
               />
               <p className="text-xs text-gray-500 mt-1">Leave empty for unlimited</p>
@@ -1375,7 +1375,7 @@ const handleSearchInfluencers = async () => {
               type="text"
               value={influencerSearchData.keywords}
               onChange={(e) => setInfluencerSearchData({ ...influencerSearchData, keywords: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., AI automation, B2B sales, marketing"
             />
             <p className="text-xs text-gray-500 mt-1">Separate keywords with commas</p>
@@ -1391,7 +1391,7 @@ const handleSearchInfluencers = async () => {
                 value={influencerSearchData.minReactions}
                 onChange={(e) => setInfluencerSearchData({ ...influencerSearchData, minReactions: parseInt(e.target.value) || 40 })}
                 min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
               />
             </div>
             <div>
@@ -1403,7 +1403,7 @@ const handleSearchInfluencers = async () => {
                 value={influencerSearchData.minFollowers}
                 onChange={(e) => setInfluencerSearchData({ ...influencerSearchData, minFollowers: parseInt(e.target.value) || 50000 })}
                 min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="input"
               />
             </div>
           </div>

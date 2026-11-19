@@ -327,7 +327,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             rows={6}
             disabled={isFetching}
             placeholder="Describe your company, what you do, your target audience, and your unique selling points..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y disabled:bg-gray-50"
+            className="input resize-y disabled:bg-gray-50"
           />
           <p className="text-xs text-gray-500 mt-1">
             Describe your business. This will be used for persona and service generation. You can type, paste, or fetch from a website above.
@@ -344,7 +344,7 @@ export function WebsiteModal({ isOpen, onClose, onSave, existingData }) {
             rows={4}
             disabled={isFetching}
             placeholder="List your products and services, with brief descriptions..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y disabled:bg-gray-50"
+            className="input resize-y disabled:bg-gray-50"
           />
           <p className="text-xs text-gray-500 mt-1">
             List your products/services. You can type, paste, or fetch from a website above.

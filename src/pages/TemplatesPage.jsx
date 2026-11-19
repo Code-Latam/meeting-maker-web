@@ -283,7 +283,7 @@ export function TemplatesPage() {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className="input"
               placeholder="e.g., Cold Outreach"
               required
             />
@@ -297,7 +297,7 @@ export function TemplatesPage() {
               value={formData.template}
               onChange={(e) => setFormData({ ...formData, template: e.target.value })}
               rows={6}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none font-mono text-sm"
+              className="input font-mono text-sm"
               placeholder="Hi {firstName}, I noticed you're a great fit for..."
               required
             />

@@ -39,6 +39,13 @@ export function BoostStatus() {
   };
 
   const statusInfo = getStatusBadge(post.status);
+
+  // Safe date formatter (avoids "Invalid Date" when a date is missing/unparseable)
+  const formatDate = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  };
   
   // Check if post can be deleted
   const isToday = new Date(post.createdAt).toDateString() === new Date().toDateString();
@@ -111,12 +118,12 @@ export function BoostStatus() {
       {/* Status details */}
       <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
         <div className="flex flex-wrap justify-between gap-2 text-xs text-gray-500">
-          <span>Created: {new Date(post.createdAt).toLocaleString()}</span>
+          <span>Created: {formatDate(post.createdAt)}</span>
           {post.boostedAt && (
-            <span>Boosted: {new Date(post.boostedAt).toLocaleString()}</span>
+            <span>Boosted: {formatDate(post.boostedAt)}</span>
           )}
           {post.failedAt && (
-            <span>Failed: {new Date(post.failedAt).toLocaleString()}</span>
+            <span>Failed: {formatDate(post.failedAt)}</span>
           )}
         </div>
         {post.failureReason && (

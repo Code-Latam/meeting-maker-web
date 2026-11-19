@@ -188,7 +188,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
             type="text"
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="input"
             placeholder="e.g., Enterprise Contract"
             required
           />
@@ -200,7 +200,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+            className="input resize-y"
             placeholder="Deal details..."
           />
         </div>
@@ -211,7 +211,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
             type="number"
             value={formData.dealSize}
             onChange={(e) => handleChange('dealSize', e.target.value)}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${
+            className={`input ${
               isSizeLocked ? 'bg-gray-100 cursor-not-allowed' : ''
             }`}
             placeholder="0"
@@ -232,7 +232,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
           <select
             value={formData.dealType}
             onChange={(e) => handleChange('dealType', e.target.value)}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${
+            className={`input ${
               isTypeLocked ? 'bg-gray-100 cursor-not-allowed' : ''
             }`}
             disabled={isTypeLocked}
@@ -254,7 +254,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
           <select
             value={formData.stage}
             onChange={(e) => handleChange('stage', e.target.value)}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${
+            className={`input ${
               isStageLocked ? 'bg-gray-100 cursor-not-allowed' : ''
             }`}
             disabled={isStageLocked}
@@ -299,7 +299,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
             type="date"
             value={formData.expectedCloseDate}
             onChange={(e) => handleChange('expectedCloseDate', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="input"
           />
         </div>
 
@@ -309,7 +309,7 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
             type="text"
             value={formData.closedReason}
             onChange={(e) => handleChange('closedReason', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            className="input"
             placeholder="e.g., Price, Competitor, Not interested"
           />
         </div>
