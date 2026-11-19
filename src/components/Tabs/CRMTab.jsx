@@ -6,7 +6,7 @@ import { PersonSearch } from '../CRM/PersonSearch';
 import { TasksTab } from '../CRM/TasksTab';
 
 export function CRMTab() {
-  const [activeSubTab, setActiveSubTab] = useState('contacts');
+  const [activeSubTab, setActiveSubTab] = useState('deals');
 
   return (
     <div className="space-y-4">
@@ -16,16 +16,6 @@ export function CRMTab() {
       {/* Sub-tabs */}
       <div className="border-b border-gray-200">
         <div className="flex gap-0 overflow-x-auto">
-          <button
-            onClick={() => setActiveSubTab('contacts')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeSubTab === 'contacts'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            ⭐ Important Contacts
-          </button>
           <button
             onClick={() => setActiveSubTab('deals')}
             className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
@@ -47,6 +37,16 @@ export function CRMTab() {
             ✅ Tasks
           </button>
           <button
+            onClick={() => setActiveSubTab('contacts')}
+            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              activeSubTab === 'contacts'
+                ? 'text-primary-600 border-b-2 border-primary-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            ⭐ Important Contacts
+          </button>
+          <button
             onClick={() => setActiveSubTab('finance')}
             className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               activeSubTab === 'finance'
@@ -60,9 +60,9 @@ export function CRMTab() {
       </div>
 
       {/* Content */}
-      {activeSubTab === 'contacts' && <ImportantContacts />}
       {activeSubTab === 'deals' && <DealsBoard />}
       {activeSubTab === 'tasks' && <TasksTab />}
+      {activeSubTab === 'contacts' && <ImportantContacts />}
       {activeSubTab === 'finance' && <FinanceDashboard />}
     </div>
   );
