@@ -5,6 +5,8 @@ import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { crmService } from '../../services/crm';
 import { agentsService } from '../../services/agents';
 import { MessageList } from './MessageList';
+import { DealNotesEditor } from '../CRM/DealNotesEditor';
+import { DealActionsEditor } from '../CRM/DealActionsEditor';
 
 // Helper to format thread info
 const formatThreadInfo = (thread) => {
@@ -50,6 +52,12 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [channelPreference, setChannelPreference] = useState('linkedin');
   const [emailAddress, setEmailAddress] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [title, setTitle] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
 
   // Lifecycle states
   const [linkedinState, setLinkedinState] = useState('open');
@@ -68,17 +76,43 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     dealType: '',
     description: '',
     expectedCloseDate: '',
-    probability: 10
+    probability: 10,
+    actions: [],
+    notes: []
   });
-  const [editingDealId, setEditingDealId] = useState(null);
+  const [editingDeal, setEditingDeal] = useState(null);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState('mm');
+  const [activeTab, setActiveTab] = useState('gi');
+
+  // Sync the editable "General Information" fields from a person object
+  const syncGiFields = (p) => {
+    if (!p) return;
+    setFirstName(p.firstName || '');
+    setLastName(p.lastName || '');
+    setTitle(p.title || '');
+    setCompanyName(p.companyName || '');
+    setPhone(
+      p.phone ||
+      p.dedupe?.primaryPhoneE164 ||
+      p.channels?.find((c) => c.type === 'sms' || c.type === 'whatsapp')?.identifiers?.phoneE164 ||
+      ''
+    );
+    setEmailAddress(
+      p.channels?.find((c) => c.type === 'email')?.identifiers?.email ||
+      p.dedupe?.primaryEmail ||
+      ''
+    );
+    setLinkedinUrl(
+      p.channels?.find((c) => c.type === 'linkedin')?.identifiers?.profileUrl ||
+      (p.dedupe?.linkedinPublicId ? `https://www.linkedin.com/in/${p.dedupe.linkedinPublicId}/` : '') ||
+      ''
+    );
+  };
 
   // Sync group from activity data when it becomes available
   useEffect(() => {
     if (activity?.group && !loading) {
-      console.log('🔄 Syncing group data from activity:', activity.group);
       setGroups(prev => {
         const exists = prev.some(g => g._id === activity.group._id);
         if (!exists) {
@@ -96,7 +130,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   const loadPersonData = useCallback(async () => {
     // Try multiple ways to get the person ID
     let id = null;
-    
+
     if (activity?.personId) {
       id = activity.personId;
     } else if (activity?.person?.id) {
@@ -108,29 +142,24 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     } else if (activity?._id) {
       id = activity._id;
     }
-    
+
     if (!id && activity?.person) {
       id = activity.person._id || activity.person.id;
     }
-    
-    console.log('🔍 Extracted personId:', id);
-    
+
     if (!id) {
-      console.warn('No personId found in activity:', activity);
       showToast('Could not find person information', 'error');
       setLoading(false);
       return;
     }
-    
+
     setPersonId(id);
     setLoading(true);
-    
+
     try {
-      // Check if we already have the data in the activity object
       let personData = null;
       let useExistingData = false;
-      
-      // Check if activity has assignedAgentId or groupId
+
       if (activity?.assignedAgentId !== undefined || activity?.groupId !== undefined) {
         personData = {
           _id: id,
@@ -150,29 +179,27 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
           channels: [],
           meeting: activity.meeting || {}
         };
-        
+
         useExistingData = true;
-        
-        // Add the group to the groups list if it exists
+
         if (activity.group && activity.group._id) {
           setGroups([activity.group]);
           setGroupId(activity.group._id);
         }
-        
+
         setPerson(personData);
         setPersonType(personData.personType);
         setAssignedAgentId(personData.assignedAgentId || '');
         setGroupId(personData.groupId || '');
         setChannelPreference(personData.channelPreference || 'linkedin');
       }
-      
+
       // Always fetch the full person data for threads and other details
       const personResult = await crmService.getPerson(id);
-      
+
       if (personResult.success && personResult.person) {
         const p = personResult.person;
-        
-        // Merge the fetched data with existing data
+
         if (useExistingData && personData) {
           const mergedPerson = {
             ...personData,
@@ -182,13 +209,12 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
             group: personData.group || p.group,
           };
           setPerson(mergedPerson);
-          
+
           setPersonType(mergedPerson.personType || 'prospect');
           setAssignedAgentId(mergedPerson.assignedAgentId || '');
           setGroupId(mergedPerson.groupId || '');
           setChannelPreference(mergedPerson.channelPreference || 'linkedin');
-          
-          // Update group if fetched data has it
+
           if (p.group && p.group._id) {
             setGroups(prev => {
               const exists = prev.some(g => g._id === p.group._id);
@@ -207,8 +233,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
           setAssignedAgentId(p.assignedAgentId || '');
           setGroupId(p.groupId || '');
           setChannelPreference(p.channelPreference || 'linkedin');
-          
-          // Add group from fetched data
+
           if (p.group && p.group._id) {
             setGroups(prev => {
               const exists = prev.some(g => g._id === p.group._id);
@@ -220,13 +245,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
             setGroupId(p.group._id);
           }
         }
-        
-        const finalPerson = personResult.success && personResult.person ? 
-          (useExistingData ? { ...personData, ...personResult.person } : personResult.person) : 
-          personData || personResult.person;
 
-        const emailChannel = finalPerson?.channels?.find(c => c.type === 'email');
-        setEmailAddress(emailChannel?.identifiers?.email || '');
+        const finalPerson = personResult.person;
+        syncGiFields(finalPerson);
 
         const linkedinThread = finalPerson?.threads?.find(t => t.channel === 'linkedin');
         if (linkedinThread) {
@@ -281,7 +302,6 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
 
   useEffect(() => {
     if (isOpen && activity) {
-      // Reset groups when modal opens to avoid stale data
       setGroups([]);
       setGroupId('');
       loadPersonData();
@@ -294,8 +314,18 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
 
     setSaving(true);
     try {
-      // 1. Update person
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      // 1. Update person (single PATCH for all General Information fields)
       const updates = {
+        firstName,
+        lastName,
+        fullName,
+        title,
+        companyName,
+        phone,
+        email: emailAddress,
+        linkedinUrl,
         personType,
         assignedAgentId: assignedAgentId || null,
         groupId: groupId || null,
@@ -331,21 +361,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         }
       }
 
-      // 3. Update email channel if changed
-      const currentEmail = person.channels?.find(c => c.type === 'email')?.identifiers?.email || '';
-      if (emailAddress !== currentEmail) {
-        const emailResult = await crmService.updateEmailChannel(personId, emailAddress);
-        if (!emailResult.success) {
-          showToast(emailResult.error || 'Failed to update email', 'error');
-          setSaving(false);
-          return;
-        }
-        if (emailResult.person) {
-          setPerson(emailResult.person);
-        }
-      }
-
-      // 4. Update email lifecycle if state changed
+      // 3. Update email lifecycle if state changed
       const currentEmailState = emailThreadInfo?.lifecycle?.state || '';
       if (emailState && emailState !== currentEmailState) {
         const emailLifecycleResult = await crmService.updateEmailLifecycle(
@@ -363,7 +379,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         }
       }
 
-      showToast('✅ Changes applied successfully!', 'success');
+      showToast('Changes applied successfully!', 'success');
 
       // Reload everything
       await loadPersonData();
@@ -398,11 +414,13 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         stage: dealForm.stage,
         dealType: dealForm.dealType || null,
         probability: parseInt(dealForm.probability) || 10,
-        expectedCloseDate: dealForm.expectedCloseDate || null
+        expectedCloseDate: dealForm.expectedCloseDate || null,
+        actions: dealForm.actions || [],
+        notes: dealForm.notes || []
       });
 
       if (result.success) {
-        showToast('✅ Deal created successfully!', 'success');
+        showToast('Deal created successfully!', 'success');
         setShowDealForm(false);
         setDealForm({
           name: '',
@@ -411,7 +429,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
           dealType: '',
           description: '',
           expectedCloseDate: '',
-          probability: 10
+          probability: 10,
+          actions: [],
+          notes: []
         });
         await loadPersonData();
       } else {
@@ -426,36 +446,36 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   };
 
   // Handle editing a deal - toggle edit mode
-  const handleEditDeal = (dealId) => {
-    setEditingDealId(editingDealId === dealId ? null : dealId);
+  const handleEditDeal = (deal) => {
+    setEditingDeal(editingDeal && editingDeal._id === deal._id ? null : { ...deal });
+  };
+
+  const updateEditingDeal = (field, value) => {
+    setEditingDeal(prev => (prev ? { ...prev, [field]: value } : prev));
   };
 
   // Handle saving a deal edit
-  const handleSaveDealEdit = async (dealId) => {
-    // Get values from the edit form fields
-    const nameInput = document.getElementById(`deal-edit-name-${dealId}`);
-    const sizeInput = document.getElementById(`deal-edit-size-${dealId}`);
-    const stageSelect = document.getElementById(`deal-edit-stage-${dealId}`);
-    const probInput = document.getElementById(`deal-edit-prob-${dealId}`);
-    const dateInput = document.getElementById(`deal-edit-date-${dealId}`);
-    const descInput = document.getElementById(`deal-edit-desc-${dealId}`);
-    const typeSelect = document.getElementById(`deal-edit-type-${dealId}`);
+  const handleSaveDealEdit = async () => {
+    if (!editingDeal) return;
 
-    const updates = {};
-    if (nameInput && nameInput.value) updates.name = nameInput.value;
-    if (sizeInput) updates.dealSize = parseFloat(sizeInput.value) || 0;
-    if (stageSelect) updates.stage = stageSelect.value;
-    if (probInput) updates.probability = parseInt(probInput.value) || 10;
-    if (dateInput) updates.expectedCloseDate = dateInput.value || null;
-    if (descInput) updates.description = descInput.value;
-    if (typeSelect) updates.dealType = typeSelect.value || null;
+    const updates = {
+      name: editingDeal.name,
+      description: editingDeal.description || '',
+      dealSize: parseFloat(editingDeal.dealSize) || 0,
+      stage: editingDeal.stage || 'lead',
+      dealType: editingDeal.dealType || null,
+      probability: parseInt(editingDeal.probability) || 10,
+      expectedCloseDate: editingDeal.expectedCloseDate || null,
+      actions: editingDeal.actions || [],
+      notes: editingDeal.notes || []
+    };
 
     setSaving(true);
     try {
-      const result = await crmService.updateDeal(dealId, updates);
+      const result = await crmService.updateDeal(editingDeal._id, updates);
       if (result.success) {
-        showToast('✅ Deal updated successfully!', 'success');
-        setEditingDealId(null);
+        showToast('Deal updated successfully!', 'success');
+        setEditingDeal(null);
         await loadPersonData();
       } else {
         showToast(result.error || 'Failed to update deal', 'error');
@@ -470,7 +490,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
 
   // Handle cancel edit
   const handleCancelEdit = () => {
-    setEditingDealId(null);
+    setEditingDeal(null);
   };
 
   // Handle deleting a deal
@@ -481,7 +501,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     try {
       const result = await crmService.deleteDeal(dealId);
       if (result.success) {
-        showToast('✅ Deal deleted successfully!', 'success');
+        showToast('Deal deleted successfully!', 'success');
         await loadPersonData();
       } else {
         showToast(result.error || 'Failed to delete deal', 'error');
@@ -505,7 +525,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     try {
       const result = await crmService.createGroup(newGroupName.trim());
       if (result.success) {
-        showToast('✅ Group created successfully!', 'success');
+        showToast('Group created successfully!', 'success');
         setGroups([...groups, result.group]);
         setGroupId(result.group._id);
         setShowNewGroup(false);
@@ -569,20 +589,20 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         {/* Tabs */}
         <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-2">
           <button
-            onClick={() => setActiveTab('mm')}
+            onClick={() => setActiveTab('gi')}
             className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-              activeTab === 'mm' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              activeTab === 'gi' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            Meeting Maker
+            General Information
           </button>
           <button
-            onClick={() => setActiveTab('funnels')}
+            onClick={() => setActiveTab('messages')}
             className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-              activeTab === 'funnels' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              activeTab === 'messages' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            Funnels
+            💬 Messages
           </button>
           <button
             onClick={() => setActiveTab('deals')}
@@ -593,20 +613,102 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
             Deals ({deals.length})
           </button>
           <button
-            onClick={() => setActiveTab('messages')}
+            onClick={() => setActiveTab('funnels')}
             className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-              activeTab === 'messages' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              activeTab === 'funnels' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            💬 Messages
+            Funnels
           </button>
         </div>
 
         {/* ============================================================ */}
-        {/* MEETING MAKER TAB */}
+        {/* GENERAL INFORMATION TAB */}
         {/* ============================================================ */}
-        {activeTab === 'mm' && (
+        {activeTab === 'gi' && (
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="input"
+                  disabled={saving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="input"
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input"
+                disabled={saving}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="input"
+                disabled={saving}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
+              <input
+                type="text"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                className="input"
+                placeholder="https://www.linkedin.com/in/username/"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  className="input"
+                  placeholder="email@example.com"
+                  disabled={saving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="input"
+                  placeholder="+1 555 000 0000"
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Person Type</label>
               <select
@@ -726,156 +828,40 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         )}
 
         {/* ============================================================ */}
-        {/* FUNNELS TAB */}
+        {/* MESSAGES TAB */}
         {/* ============================================================ */}
-        {activeTab === 'funnels' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Funnel</label>
-              <select
-                value={channelPreference}
-                onChange={(e) => setChannelPreference(e.target.value)}
-                className="input"
-                disabled={saving}
-              >
-                <option value="linkedin">LinkedIn</option>
-                <option value="email">Email</option>
-              </select>
-            </div>
-
-            <hr className="border-gray-200" />
-
-            {/* LinkedIn Funnel */}
-            <div>
+        {activeTab === 'messages' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-gray-700">🔗 LinkedIn Funnel</h4>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  linkedinState === 'open' ? 'bg-green-100 text-green-700' :
-                  linkedinState === 'converted' ? 'bg-blue-100 text-blue-700' :
-                  linkedinState === 'paused' ? 'bg-yellow-100 text-yellow-700' :
-                  linkedinState === 'do_not_contact' ? 'bg-red-100 text-red-700' :
-                  linkedinState === 'archived' ? 'bg-gray-100 text-gray-500' :
-                  'bg-gray-100 text-gray-600'
-                }`}>
-                  {linkedinState || 'open'}
+                <h4 className="text-sm font-semibold text-gray-700">💬 Conversation History</h4>
+                <span className="text-xs text-gray-400">
+                  (All messages across all channels)
                 </span>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 mt-1 text-sm">
-                {formatThreadInfo(linkedinThreadInfo)}
+              <div className="flex gap-1">
+                {['all', 'linkedin', 'email'].map((ch) => (
+                  <button
+                    key={ch}
+                    onClick={() => setMessageChannel(ch)}
+                    className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                      messageChannel === ch
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {ch === 'all' ? 'All' : ch === 'linkedin' ? '🔗 LinkedIn' : '📧 Email'}
+                  </button>
+                ))}
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lifecycle State</label>
-              <select
-                value={linkedinState}
-                onChange={(e) => setLinkedinState(e.target.value)}
-                className="input"
-                disabled={saving}
-              >
-                <option value="open">Open</option>
-                <option value="connected">Connected</option>
-                <option value="pending-connection">Pending Connection</option>
-                <option value="in-conversation">In Conversation</option>
-                <option value="in-conversation-ignoring-limits">In Conversation (Ignore Limits)</option>
-                <option value="paused">Paused</option>
-                <option value="converted">Converted</option>
-                <option value="irrelevant">Irrelevant</option>
-                <option value="do_not_contact">Do not contact</option>
-                <option value="archived">Archived</option>
-                <option value="blocked">Blocked</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Change</label>
-              <input
-                type="text"
-                value={linkedinReason}
-                onChange={(e) => setLinkedinReason(e.target.value)}
-                placeholder="Optional reason"
-                className="input"
-                disabled={saving}
-              />
-            </div>
-
-            <hr className="border-gray-200" />
-
-            {/* Email Funnel */}
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-gray-700">📧 Email Funnel</h4>
-                {emailState && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    emailState === 'open' ? 'bg-green-100 text-green-700' :
-                    emailState === 'converted' ? 'bg-blue-100 text-blue-700' :
-                    emailState === 'paused' ? 'bg-yellow-100 text-yellow-700' :
-                    emailState === 'do_not_contact' ? 'bg-red-100 text-red-700' :
-                    emailState === 'archived' ? 'bg-gray-100 text-gray-500' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {emailState || 'No state'}
-                  </span>
-                )}
+            {personId ? (
+              <MessageList personId={personId} channel={messageChannel} />
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Loading messages...</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 mt-1 text-sm">
-                {formatThreadInfo(emailThreadInfo)}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="No email address"
-                className="input"
-                disabled={saving}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lifecycle State</label>
-              <select
-                value={emailState}
-                onChange={(e) => setEmailState(e.target.value)}
-                className="input"
-                disabled={saving}
-              >
-                <option value="">-- No state --</option>
-                <option value="open">Open</option>
-                <option value="in-conversation">In Conversation</option>
-                <option value="in-conversation-ignoring-limits">In Conversation (Ignore Limits)</option>
-                <option value="paused">Paused</option>
-                <option value="converted">Converted</option>
-                <option value="irrelevant">Irrelevant</option>
-                <option value="do_not_contact">Do not contact</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Change</label>
-              <input
-                type="text"
-                value={emailReason}
-                onChange={(e) => setEmailReason(e.target.value)}
-                placeholder="Optional reason"
-                className="input"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={handleApplyChanges}
-                disabled={saving}
-                className="flex-1 btn-primary disabled:opacity-50"
-              >
-                {saving ? '⏳ Saving...' : 'Apply Changes'}
-              </button>
-            </div>
+            )}
           </div>
         )}
 
@@ -884,7 +870,6 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         {/* ============================================================ */}
         {activeTab === 'deals' && (
           <div className="space-y-4">
-            {/* Deals List */}
             {deals.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>No deals found for this person.</p>
@@ -893,7 +878,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {deals.map((deal) => (
                   <div key={deal._id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    {editingDealId === deal._id ? (
+                    {editingDeal && editingDeal._id === deal._id ? (
                       // ====== EDIT MODE ======
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
@@ -901,9 +886,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                             <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
                             <input
                               type="text"
-                              id={`deal-edit-name-${deal._id}`}
-                              defaultValue={deal.name || ''}
-                              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                              value={editingDeal.name || ''}
+                              onChange={(e) => updateEditingDeal('name', e.target.value)}
+                              className="input"
                               disabled={saving}
                             />
                           </div>
@@ -911,9 +896,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                             <label className="block text-xs font-medium text-gray-600 mb-1">Size ($)</label>
                             <input
                               type="number"
-                              id={`deal-edit-size-${deal._id}`}
-                              defaultValue={deal.dealSize || 0}
-                              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                              value={editingDeal.dealSize || 0}
+                              onChange={(e) => updateEditingDeal('dealSize', e.target.value)}
+                              className="input"
                               disabled={saving}
                               min="0"
                               step="0.01"
@@ -924,9 +909,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
                             <select
-                              id={`deal-edit-stage-${deal._id}`}
-                              defaultValue={deal.stage || 'lead'}
-                              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                              value={editingDeal.stage || 'lead'}
+                              onChange={(e) => updateEditingDeal('stage', e.target.value)}
+                              className="input"
                               disabled={saving}
                             >
                               <option value="lead">Lead</option>
@@ -939,9 +924,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Deal Type</label>
                             <select
-                              id={`deal-edit-type-${deal._id}`}
-                              defaultValue={deal.dealType || ''}
-                              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                              value={editingDeal.dealType || ''}
+                              onChange={(e) => updateEditingDeal('dealType', e.target.value)}
+                              className="input"
                               disabled={saving}
                             >
                               <option value="">None</option>
@@ -954,44 +939,53 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Probability: <span id={`deal-edit-prob-label-${deal._id}`}>{deal.probability || 10}%</span></label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Probability: {editingDeal.probability || 10}%
+                          </label>
                           <input
                             type="range"
-                            id={`deal-edit-prob-${deal._id}`}
                             min="0"
                             max="100"
-                            defaultValue={deal.probability || 10}
+                            value={editingDeal.probability || 10}
+                            onChange={(e) => updateEditingDeal('probability', parseInt(e.target.value))}
                             className="w-full"
                             disabled={saving}
-                            onChange={(e) => {
-                              const label = document.getElementById(`deal-edit-prob-label-${deal._id}`);
-                              if (label) label.textContent = `${e.target.value}%`;
-                            }}
                           />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Expected Close Date</label>
                           <input
                             type="date"
-                            id={`deal-edit-date-${deal._id}`}
-                            defaultValue={deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toISOString().split('T')[0] : ''}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                            value={editingDeal.expectedCloseDate ? new Date(editingDeal.expectedCloseDate).toISOString().split('T')[0] : ''}
+                            onChange={(e) => updateEditingDeal('expectedCloseDate', e.target.value)}
+                            className="input"
                             disabled={saving}
                           />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
                           <textarea
-                            id={`deal-edit-desc-${deal._id}`}
-                            defaultValue={deal.description || ''}
+                            value={editingDeal.description || ''}
+                            onChange={(e) => updateEditingDeal('description', e.target.value)}
                             rows="2"
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-y"
+                            className="input resize-y"
                             disabled={saving}
                           />
                         </div>
+
+                        <DealActionsEditor
+                          actions={editingDeal.actions || []}
+                          onChange={(actions) => updateEditingDeal('actions', actions)}
+                          allowStatus
+                        />
+                        <DealNotesEditor
+                          notes={editingDeal.notes || []}
+                          onChange={(notes) => updateEditingDeal('notes', notes)}
+                        />
+
                         <div className="flex gap-2 pt-2">
                           <button
-                            onClick={() => handleSaveDealEdit(deal._id)}
+                            onClick={handleSaveDealEdit}
                             disabled={saving}
                             className="flex-1 btn-primary text-sm py-1.5 disabled:opacity-50"
                           >
@@ -1033,10 +1027,18 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                             {deal.description && (
                               <div className="text-xs text-gray-500 mt-1">{deal.description}</div>
                             )}
+                            {deal.notes && deal.notes.length > 0 && (
+                              <div className="text-xs text-gray-500 mt-1">📝 {deal.notes.length} note(s)</div>
+                            )}
+                            {deal.actions && deal.actions.some(a => a.status === 'pending') && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                📌 {deal.actions.filter(a => a.status === 'pending').length} pending task(s)
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-1">
                             <button
-                              onClick={() => handleEditDeal(deal._id)}
+                              onClick={() => handleEditDeal(deal)}
                               className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50"
                               disabled={saving}
                             >
@@ -1161,6 +1163,16 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     disabled={saving}
                   />
                 </div>
+
+                <DealActionsEditor
+                  actions={dealForm.actions}
+                  onChange={(actions) => setDealForm((prev) => ({ ...prev, actions }))}
+                />
+                <DealNotesEditor
+                  notes={dealForm.notes}
+                  onChange={(notes) => setDealForm((prev) => ({ ...prev, notes }))}
+                />
+
                 <div className="flex gap-3">
                   <button
                     onClick={handleCreateDeal}
@@ -1179,7 +1191,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                         dealType: '',
                         description: '',
                         expectedCloseDate: '',
-                        probability: 10
+                        probability: 10,
+                        actions: [],
+                        notes: []
                       });
                     }}
                     className="btn-secondary"
@@ -1194,41 +1208,144 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         )}
 
         {/* ============================================================ */}
-        {/* MESSAGES TAB */}
+        {/* FUNNELS TAB */}
         {/* ============================================================ */}
-        {activeTab === 'messages' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+        {activeTab === 'funnels' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Funnel</label>
+              <select
+                value={channelPreference}
+                onChange={(e) => setChannelPreference(e.target.value)}
+                className="input"
+                disabled={saving}
+              >
+                <option value="linkedin">LinkedIn</option>
+                <option value="email">Email</option>
+              </select>
+            </div>
+
+            <hr className="border-gray-200" />
+
+            {/* LinkedIn Funnel */}
+            <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-gray-700">💬 Conversation History</h4>
-                <span className="text-xs text-gray-400">
-                  (All messages across all channels)
+                <h4 className="text-sm font-semibold text-gray-700">🔗 LinkedIn Funnel</h4>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  linkedinState === 'open' ? 'bg-green-100 text-green-700' :
+                  linkedinState === 'converted' ? 'bg-blue-100 text-blue-700' :
+                  linkedinState === 'paused' ? 'bg-yellow-100 text-yellow-700' :
+                  linkedinState === 'do_not_contact' ? 'bg-red-100 text-red-700' :
+                  linkedinState === 'archived' ? 'bg-gray-100 text-gray-500' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {linkedinState || 'open'}
                 </span>
               </div>
-              {/* Channel filter */}
-              <div className="flex gap-1">
-                {['all', 'linkedin', 'email'].map((ch) => (
-                  <button
-                    key={ch}
-                    onClick={() => setMessageChannel(ch)}
-                    className={`px-2 py-1 text-xs rounded-full transition-colors ${
-                      messageChannel === ch
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {ch === 'all' ? 'All' : ch === 'linkedin' ? '🔗 LinkedIn' : '📧 Email'}
-                  </button>
-                ))}
+              <div className="bg-gray-50 rounded-lg p-3 mt-1 text-sm">
+                {formatThreadInfo(linkedinThreadInfo)}
               </div>
             </div>
-            {personId ? (
-              <MessageList personId={personId} channel={messageChannel} />
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>Loading messages...</p>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lifecycle State</label>
+              <select
+                value={linkedinState}
+                onChange={(e) => setLinkedinState(e.target.value)}
+                className="input"
+                disabled={saving}
+              >
+                <option value="open">Open</option>
+                <option value="connected">Connected</option>
+                <option value="pending-connection">Pending Connection</option>
+                <option value="in-conversation">In Conversation</option>
+                <option value="in-conversation-ignoring-limits">In Conversation (Ignore Limits)</option>
+                <option value="paused">Paused</option>
+                <option value="converted">Converted</option>
+                <option value="irrelevant">Irrelevant</option>
+                <option value="do_not_contact">Do not contact</option>
+                <option value="archived">Archived</option>
+                <option value="blocked">Blocked</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Change</label>
+              <input
+                type="text"
+                value={linkedinReason}
+                onChange={(e) => setLinkedinReason(e.target.value)}
+                placeholder="Optional reason"
+                className="input"
+                disabled={saving}
+              />
+            </div>
+
+            <hr className="border-gray-200" />
+
+            {/* Email Funnel */}
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-gray-700">📧 Email Funnel</h4>
+                {emailState && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    emailState === 'open' ? 'bg-green-100 text-green-700' :
+                    emailState === 'converted' ? 'bg-blue-100 text-blue-700' :
+                    emailState === 'paused' ? 'bg-yellow-100 text-yellow-700' :
+                    emailState === 'do_not_contact' ? 'bg-red-100 text-red-700' :
+                    emailState === 'archived' ? 'bg-gray-100 text-gray-500' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {emailState || 'No state'}
+                  </span>
+                )}
               </div>
-            )}
+              <div className="bg-gray-50 rounded-lg p-3 mt-1 text-sm">
+                {formatThreadInfo(emailThreadInfo)}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lifecycle State</label>
+              <select
+                value={emailState}
+                onChange={(e) => setEmailState(e.target.value)}
+                className="input"
+                disabled={saving}
+              >
+                <option value="">-- No state --</option>
+                <option value="open">Open</option>
+                <option value="in-conversation">In Conversation</option>
+                <option value="in-conversation-ignoring-limits">In Conversation (Ignore Limits)</option>
+                <option value="paused">Paused</option>
+                <option value="converted">Converted</option>
+                <option value="irrelevant">Irrelevant</option>
+                <option value="do_not_contact">Do not contact</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Change</label>
+              <input
+                type="text"
+                value={emailReason}
+                onChange={(e) => setEmailReason(e.target.value)}
+                placeholder="Optional reason"
+                className="input"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleApplyChanges}
+                disabled={saving}
+                className="flex-1 btn-primary disabled:opacity-50"
+              >
+                {saving ? '⏳ Saving...' : 'Apply Changes'}
+              </button>
+            </div>
           </div>
         )}
       </div>

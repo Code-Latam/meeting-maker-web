@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../Common/Modal';
 import { useUIStore } from '../../store';
+import { DealNotesEditor } from './DealNotesEditor';
 
 export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) {
   const { showToast } = useUIStore();
@@ -13,7 +14,8 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
     probability: 10,
     expectedCloseDate: '',
     closedReason: '',
-    actions: []
+    actions: [],
+    notes: []
   });
   const [isLocked, setIsLocked] = useState(false);
   const [isClosedWon, setIsClosedWon] = useState(false);
@@ -44,7 +46,8 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
         probability: deal.probability || 10,
         expectedCloseDate: deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toISOString().split('T')[0] : '',
         closedReason: deal.closedReason || '',
-        actions: formattedActions
+        actions: formattedActions,
+        notes: deal.notes || []
       });
     }
   }, [deal]);
@@ -158,7 +161,8 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
       probability: parseInt(formData.probability) || 10,
       expectedCloseDate: formData.expectedCloseDate || null,
       closedReason: formData.closedReason?.trim() || '',
-      actions: formData.actions || []
+      actions: formData.actions || [],
+      notes: formData.notes || []
     };
 
     onSave(deal._id, updates);
@@ -416,6 +420,12 @@ export default function DealModal({ isOpen, deal, dealTypes, onClose, onSave }) 
             <p className="text-xs text-red-500 mt-1">🔒 Actions cannot be modified (commission paid)</p>
           )}
         </div>
+
+        {/* Notes */}
+        <DealNotesEditor
+          notes={formData.notes}
+          onChange={(notes) => setFormData((prev) => ({ ...prev, notes }))}
+        />
 
         <div className="flex gap-3 pt-4 border-t border-gray-200">
           <button type="submit" className="flex-1 btn-primary">

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Modal } from '../Common/Modal';
 import { crmService } from '../../services/crm';
 import { useUIStore } from '../../store';
+import { DealNotesEditor } from './DealNotesEditor';
 
 function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
   const { showToast } = useUIStore();
@@ -17,7 +18,8 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
     dealType: '',
     probability: 10,
     expectedCloseDate: '',
-    actions: []
+    actions: [],
+    notes: []
   });
   const [actionInput, setActionInput] = useState('');
   const [actionDueDate, setActionDueDate] = useState('');
@@ -96,7 +98,8 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
       dealType: formData.dealType || null,
       probability: parseInt(formData.probability) || 10,
       expectedCloseDate: formData.expectedCloseDate || null,
-      actions: formData.actions
+      actions: formData.actions,
+      notes: formData.notes
     });
   };
 
@@ -112,7 +115,8 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
       dealType: '',
       probability: 10,
       expectedCloseDate: '',
-      actions: []
+      actions: [],
+      notes: []
     });
     setActionInput('');
     setActionDueDate('');
@@ -341,6 +345,12 @@ function CreateDealModal({ isOpen, dealTypes, onClose, onCreate }) {
               </div>
             </div>
           </div>
+
+          {/* Notes */}
+          <DealNotesEditor
+            notes={formData.notes}
+            onChange={(notes) => setFormData((prev) => ({ ...prev, notes }))}
+          />
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-gray-200">

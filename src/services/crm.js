@@ -120,17 +120,10 @@ export const crmService = {
   // Update deal
   async updateDeal(dealId, updates) {
     try {
-      const payload = {
-        name: updates.name,
-        description: updates.description || '',
-        dealSize: updates.dealSize || 0,
-        stage: updates.stage || 'lead',
-        dealType: updates.dealType || null,
-        probability: updates.probability || 10,
-        expectedCloseDate: updates.expectedCloseDate || null,
-        closedReason: updates.closedReason || '',
-        actions: updates.actions || []
-      };
+      const payload = {};
+      ['name', 'description', 'dealSize', 'stage', 'dealType', 'probability', 'expectedCloseDate', 'closedReason', 'actions', 'notes'].forEach((k) => {
+        if (updates[k] !== undefined) payload[k] = updates[k];
+      });
 
       const response = await api.put(`/deals/${dealId}`, payload);
       return { success: true, deal: response.data };
@@ -156,7 +149,8 @@ export const crmService = {
         dealType: dealData.dealType || null,
         probability: dealData.probability || 10,
         expectedCloseDate: dealData.expectedCloseDate || null,
-        actions: dealData.actions || []
+        actions: dealData.actions || [],
+        notes: dealData.notes || []
       };
 
       const response = await api.post('/deals', payload);
@@ -180,6 +174,19 @@ export const crmService = {
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to search people'
+      };
+    }
+  },
+
+  // Get all deals (for tasks aggregation)
+  async getAllDeals(limit = 200) {
+    try {
+      const response = await api.get(`/deals?limit=${limit}`);
+      return { success: true, deals: response.data.data || [] };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to fetch deals'
       };
     }
   },
