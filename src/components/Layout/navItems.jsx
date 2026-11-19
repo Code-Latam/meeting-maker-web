@@ -1,7 +1,6 @@
 import {
   Bot,
   Activity,
-  Target,
   LayoutDashboard,
   Building2,
   Newspaper,
@@ -14,7 +13,6 @@ import {
 export const navItems = [
   { id: 'agents', icon: Bot, label: 'Agents', path: '/' },
   { id: 'activity', icon: Activity, label: 'Activity', path: '/activity' },
-  { id: 'conversions', icon: Target, label: 'Conversions', path: '/conversions' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { id: 'crm', icon: Building2, label: 'CRM', path: '/crm' },
   { id: 'boost', icon: Rocket, label: 'Boost', path: '/boost' },

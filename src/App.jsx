@@ -16,8 +16,7 @@ import { GroupsPerformancePage } from './pages/GroupsPerformancePage';
 import { PersonsPage } from './pages/PersonsPage';
 import { AgentCampaignsPage } from './pages/AgentCampaignsPage';
 import { MarketingCampaignsPage } from './pages/MarketingCampaignsPage';
-import { ActivityTab } from './components/Activity/ActivityTab'; 
-import { ConversionsTab } from './components/Tabs/ConversionsTab';
+import { ActivityPage } from './pages/ActivityPage';
 import { BlogSettingsPage } from './pages/BlogSettingsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 
@@ -73,8 +72,8 @@ function App() {
           } 
         />
         
-        {/* ✅ Activity - visible to all */}
-        <Route path="activity" element={<ActivityTab />} /> 
+        {/* ✅ Activity (includes Conversions) - visible to all */}
+        <Route path="activity" element={<ActivityPage />} />
         
         {/* ✅ Dashboard - visible to all (redirect target for child clients) */}
         <Route path="dashboard" element={<DashboardTab />} />
@@ -105,8 +104,8 @@ function App() {
           } 
         />
 
-        {/* ✅ Conversions - visible to all */}
-        <Route path="conversions" element={<ConversionsTab />} />
+        {/* ✅ Redirect old /conversions to /activity */}
+        <Route path="conversions" element={<Navigate to="/activity" replace />} />
         
         {/* ✅ Agency Route - only visible to agency users (handled inside component) */}
         <Route path="agency" element={<Agency />} />
