@@ -8,10 +8,12 @@ import {
   TrendingUp,
   Info,
   Landmark,
+  Megaphone,
 } from 'lucide-react';
 
 export const navItems = [
   { id: 'agents', icon: Bot, label: 'Agents', path: '/' },
+  { id: 'manage-campaigns', icon: Megaphone, label: 'Manage Campaigns', path: '/manage-campaigns' },
   { id: 'activity', icon: Activity, label: 'Activity', path: '/activity' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { id: 'crm', icon: Building2, label: 'CRM', path: '/crm' },
@@ -28,7 +30,7 @@ export function filterNavItems({ isChildClient = false, isAgency = false } = {})
   let items = [...navItems];
 
   if (isChildClient) {
-    items = items.filter((i) => !['agents', 'ranking', 'about'].includes(i.id));
+    items = items.filter((i) => !['agents', 'manage-campaigns', 'ranking', 'about'].includes(i.id));
   }
 
   if (isAgency) {

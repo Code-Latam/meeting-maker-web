@@ -7,6 +7,7 @@ import { InvoicePage } from './pages/InvoicePage';
 import { Agency } from './pages/Agency';
 import { useAuthStore } from './store';
 import { AgentsTab } from './components/Tabs/AgentsTab';
+import { ManageCampaignsPage } from './pages/ManageCampaignsPage';
 import { DashboardTab } from './pages/DashboardTab';
 import { BoostTab } from './components/Tabs/BoostTab';
 import { RankingTab } from './components/Tabs/RankingTab';
@@ -72,6 +73,16 @@ function App() {
           } 
         />
         
+        {/* ✅ Manage Campaigns - blocked for child clients */}
+        <Route
+          path="manage-campaigns"
+          element={
+            <ChildClientGuard>
+              <ManageCampaignsPage />
+            </ChildClientGuard>
+          }
+        />
+
         {/* ✅ Activity (includes Conversions) - visible to all */}
         <Route path="activity" element={<ActivityPage />} />
         
