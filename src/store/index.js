@@ -322,12 +322,14 @@ export const useUIStore = create((set) => ({
   isSidebarOpen: window.innerWidth >= 1024,
   activeTab: 'agents',
   toast: null,
+  userMenuOpenSignal: 0,
   
   setActiveTab: (tab) => set({ activeTab: tab }),
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   setMobile: (isMobile) => set({ isMobile }),
   showToast: (message, type = 'info') => set({ toast: { message, type } }),
   hideToast: () => set({ toast: null }),
+  openUserMenu: () => set((state) => ({ userMenuOpenSignal: state.userMenuOpenSignal + 1 })),
 }));
 
 // ============================================================

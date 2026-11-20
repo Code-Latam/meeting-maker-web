@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Menu } from '@headlessui/react';
-import { useAuthStore, useAppStore } from '../../store';
+import { useAuthStore, useAppStore, useUIStore } from '../../store';
 import { api } from '../../services/api';
 import {
   Link2,
@@ -14,6 +14,14 @@ import {
 export function UserMenu() {
   const { user, client, agencyClient, logout } = useAuthStore();
   const { activeClientId } = useAppStore();
+  const { userMenuOpenSignal } = useUIStore();
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    if (userMenuOpenSignal > 0) {
+      buttonRef.current?.click();
+    }
+  }, [userMenuOpenSignal]);
 
   const [linkedinStatus, setLinkedinStatus] = useState({
     connected: false,
@@ -270,6 +278,7 @@ export function UserMenu() {
   return (
     <Menu as="div" className="relative">
       <Menu.Button
+        ref={buttonRef}
         className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 text-sm font-semibold grid place-items-center hover:bg-primary-200 transition-colors focus:outline-none"
         aria-label="Account menu"
       >

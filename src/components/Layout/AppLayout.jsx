@@ -5,6 +5,7 @@ import { MobileNav } from './MobileNav';
 import { DesktopSidebar } from './DesktopSidebar';
 import { Header } from './Header';
 import { Toast } from '../Common/Toast';
+import { SetupBanner } from './SetupBanner';
 
 export function AppLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -28,6 +29,7 @@ export function AppLayout() {
         <div className="flex flex-col h-screen max-w-md mx-auto">
           <Header />
           <main className="flex-1 overflow-y-auto px-4 py-4 pb-24 scroll-container">
+            <SetupBanner />
             <Outlet />
           </main>
           <MobileNav />
@@ -40,6 +42,7 @@ export function AppLayout() {
             <Header />
             <main className="flex-1 overflow-y-auto p-6 scroll-container">
               <div className="max-w-7xl mx-auto">
+                <SetupBanner />
                 <Outlet />
               </div>
             </main>

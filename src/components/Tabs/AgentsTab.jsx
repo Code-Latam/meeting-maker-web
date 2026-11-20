@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AgentList } from '../Agent/AgentList';
 import { AgentForm } from '../Agent/AgentForm';
 import { BottomSheet } from '../Common/BottomSheet';
 import { useUIStore } from '../../store';
+import { agentsService } from '../../services/agents';
 
 export function AgentsTab() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState(null);
   const { showToast } = useUIStore();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const handleEditAgent = (agent) => {
     setEditingAgent(agent);
@@ -27,6 +30,18 @@ export function AgentsTab() {
   const handleSuccess = () => {
     // AgentList will auto-refresh via the store
   };
+
+  // Auto-open an agent's edit sheet when arriving via /?agent=<id>
+  useEffect(() => {
+    const agentId = searchParams.get('agent');
+    if (!agentId) return;
+    agentsService.getAgent(agentId).then((result) => {
+      if (result.success && result.agent) {
+        handleEditAgent(result.agent);
+      }
+      setSearchParams({}, { replace: true });
+    });
+  }, [searchParams]);
 
   return (
     <div className="space-y-4">
