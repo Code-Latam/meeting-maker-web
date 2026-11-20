@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSetupStore } from '../../store/setupStore';
 import { useUIStore } from '../../store';
-import { TriangleAlert, CircleAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import { TriangleAlert, CircleAlert, CircleCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function SetupBanner() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items, fetchStatus } = useSetupStore();
+  const { items, loaded, error, fetchStatus } = useSetupStore();
   const { openUserMenu } = useUIStore();
   const [expanded, setExpanded] = useState(false);
 
@@ -26,7 +26,22 @@ export function SetupBanner() {
     return () => clearInterval(id);
   }, []);
 
-  if (!items || items.length === 0) return null;
+  // Don't render anything until the first check has actually completed
+  // (avoids a premature "Setup complete" flash before data loads).
+  if (!loaded) return null;
+
+  // On error, stay silent rather than claiming completeness falsely.
+  if (error) return null;
+
+  // Everything is configured → subtle positive confirmation.
+  if (!items || items.length === 0) {
+    return (
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+        <CircleCheck size={14} className="flex-shrink-0 text-green-600" />
+        <span className="text-xs font-medium text-green-800">Setup complete</span>
+      </div>
+    );
+  }
 
   const criticals = items.filter((i) => i.severity === 'critical');
   const warnings = items.filter((i) => i.severity === 'warning');
