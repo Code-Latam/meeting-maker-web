@@ -25,12 +25,23 @@ export function ManageCampaignsPage() {
   const isPremium = client?.plan === 'premium';
 
   // Same eligibility as the campaign button on the agent card
-  const eligibleAgents = agents.filter(
-    (agent) =>
-      isPremium &&
-      agent.role !== 'SEO Manager' &&
-      agent.role !== 'Custom Service Representative'
-  );
+  const isBdr = (agent) => {
+    const r = (agent.role || '').toLowerCase();
+    return r === 'bdr' || r === 'business development representative';
+  };
+
+  const eligibleAgents = agents
+    .filter(
+      (agent) =>
+        isPremium &&
+        agent.role !== 'SEO Manager' &&
+        agent.role !== 'Custom Service Representative'
+    )
+    .sort((a, b) => {
+      const aBdr = isBdr(a) ? 0 : 1;
+      const bBdr = isBdr(b) ? 0 : 1;
+      return aBdr - bBdr;
+    });
 
   const handleSelect = (agent) => {
     const isMarketingManager = agent.role === 'Marketing Manager';
