@@ -1,6 +1,7 @@
 // src/components/AgentList.js
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAgentStore } from '../../store/agentStore';
 import { AgentCard } from './AgentCard';
 import { useUIStore, useAuthStore, useAppStore } from '../../store';
@@ -15,6 +16,8 @@ export function AgentList({ onEditAgent }) {
   const { activeClientId } = useAppStore();
 
   const clientId = activeClientId || client?.id;
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedId, setSelectedId] = useState(null);
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
@@ -50,6 +53,16 @@ export function AgentList({ onEditAgent }) {
     loadCompanyProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  // Auto-open the company info modal when arriving via /?company=1
+  // (used by the setup banner's "Company info incomplete" item).
+  useEffect(() => {
+    if (searchParams.get('company') === '1') {
+      setIsWebsiteModalOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isWebsiteModalOpen) {
