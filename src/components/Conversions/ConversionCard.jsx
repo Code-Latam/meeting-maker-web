@@ -65,13 +65,6 @@ export function ConversionCard({ conversion, onClick }) {
         </div>
       )}
 
-      {/* Conversion Details */}
-      <div className="mt-2 text-sm text-gray-700">
-        <span className="font-medium">{typeLabel}</span>
-        <span className="text-gray-400 mx-1">•</span>
-        <span>{channelIcon} {channelLabel}</span>
-      </div>
-
       {/* Footer: Channel, conversion type, LinkedIn */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${typeColor}`}>

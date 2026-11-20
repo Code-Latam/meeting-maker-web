@@ -135,11 +135,15 @@ export const conversionService = {
   getConversionTypeLabel(type) {
     const typeMap = {
       'meeting_booked': '📅 Meeting Booked',
+      'booked': '📅 Meeting Booked',
       'subscription': '📋 Subscription',
-      'converted': '🎯 Converted',
-      'booked': '📅 Meeting Booked'
+      'email_reply': '📧 Email Reply',
+      'write_article': '📝 Article Written',
+      'send_dm': '💬 DM Sent',
+      'follow_me': '👤 Followed',
+      'converted': '🎯 Converted'
     };
-    return typeMap[type] || '🎯 Converted';
+    return typeMap[type] || type || '🎯 Converted';
   },
 
   /**
@@ -150,8 +154,12 @@ export const conversionService = {
   getConversionTypeColor(type) {
     const colorMap = {
       'meeting_booked': 'bg-green-50 border-green-200 text-green-800',
-      'subscription': 'bg-blue-50 border-blue-200 text-blue-800',
       'booked': 'bg-green-50 border-green-200 text-green-800',
+      'subscription': 'bg-blue-50 border-blue-200 text-blue-800',
+      'email_reply': 'bg-cyan-50 border-cyan-200 text-cyan-800',
+      'write_article': 'bg-purple-50 border-purple-200 text-purple-800',
+      'send_dm': 'bg-indigo-50 border-indigo-200 text-indigo-800',
+      'follow_me': 'bg-pink-50 border-pink-200 text-pink-800',
       'converted': 'bg-yellow-50 border-yellow-200 text-yellow-800'
     };
     return colorMap[type] || 'bg-purple-50 border-purple-200 text-purple-800';
