@@ -47,6 +47,18 @@ export function SetupBanner() {
   const warnings = items.filter((i) => i.severity === 'warning');
   const hasCritical = criticals.length > 0;
 
+  const summaryLabel = (() => {
+    if (!hasCritical) {
+      return `${warnings.length} setup suggestion${warnings.length > 1 ? 's' : ''}`;
+    }
+    const criticalPart = `${criticals.length} critical${criticals.length > 1 ? 's' : ''}`;
+    const warningPart =
+      warnings.length > 0
+        ? ` · ${warnings.length} warning${warnings.length > 1 ? 's' : ''}`
+        : '';
+    return `${criticalPart}${warningPart} to complete`;
+  })();
+
   const handleItemClick = (item) => {
     if (item.action === 'open_user_menu') {
       openUserMenu();
@@ -75,9 +87,7 @@ export function SetupBanner() {
             <CircleAlert size={18} className="text-amber-600 flex-shrink-0" />
           )}
           <span className={`text-sm font-medium ${hasCritical ? 'text-red-800' : 'text-amber-800'}`}>
-            {hasCritical
-              ? `${criticals.length} setup item${criticals.length > 1 ? 's' : ''} to complete`
-              : `${warnings.length} setup suggestion${warnings.length > 1 ? 's' : ''}`}
+            {summaryLabel}
           </span>
         </span>
         {expanded ? (
