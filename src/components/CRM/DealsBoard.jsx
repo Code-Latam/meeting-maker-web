@@ -122,6 +122,20 @@ export default function DealsBoard() {
     setIsEditModalOpen(true);
   };
 
+  // Handle delete deal (closed_lost only)
+  const handleDeleteDeal = async (e, dealId) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!window.confirm('Are you sure you want to delete this deal? This cannot be undone.')) return;
+    const result = await crmService.deleteDeal(dealId);
+    if (result.success) {
+      showToast('Deal deleted', 'success');
+      await loadDeals();
+    } else {
+      showToast(result.error || 'Failed to delete deal', 'error');
+    }
+  };
+
   // ← NEW: Handle view person details (opens ActivityDetailModal)
   const handleViewDetails = (e, deal) => {
     e.stopPropagation();   // don't trigger the card's edit onClick
@@ -331,6 +345,16 @@ export default function DealsBoard() {
           >
             📋 Details
           </button>
+          {stageKey === 'closed_lost' && (
+            <button
+              type="button"
+              onClick={(e) => handleDeleteDeal(e, deal._id)}
+              className="px-2 py-1 text-xs sm:text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors cursor-pointer min-h-[36px]"
+              title="Delete deal"
+            >
+              🗑️
+            </button>
+          )}
         </div>
 
         {locked && (

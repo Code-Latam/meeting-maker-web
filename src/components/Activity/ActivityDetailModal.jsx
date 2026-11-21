@@ -1136,13 +1136,15 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                             >
                               ✏️ Edit
                             </button>
-                            <button
-                              onClick={() => handleDeleteDeal(deal._id)}
-                              className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
-                              disabled={saving}
-                            >
-                              🗑️
-                            </button>
+                            {deal.stage === 'closed_lost' && (
+                              <button
+                                onClick={() => handleDeleteDeal(deal._id)}
+                                className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+                                disabled={saving}
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
