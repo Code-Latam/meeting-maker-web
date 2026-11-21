@@ -355,6 +355,19 @@ export const campaignsService = {
     }
   },
 
+  // Send a message to selected deal contacts (LinkedIn or Email)
+  async sendToDealContacts(data) {
+    try {
+      const response = await api.post('/lead-campaigns/send-to-deal-contacts', data);
+      return { success: true, ...response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to send messages'
+      };
+    }
+  },
+
   // =====================================================
   // FIND INFLUENCERS (Marketing)
   // =====================================================

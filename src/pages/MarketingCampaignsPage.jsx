@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { campaignsService } from '../services/campaigns';
+import { crmService } from '../services/crm';
 import { useUIStore } from '../store';
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
 import { Modal } from '../components/Common/Modal';
@@ -67,6 +68,16 @@ export function MarketingCampaignsPage() {
     maxMessages: ''
   });
 
+  // Deal messaging tab
+  const [dealStage, setDealStage] = useState('all');
+  const [dealPeople, setDealPeople] = useState([]);
+  const [loadingDealPeople, setLoadingDealPeople] = useState(false);
+  const [selectedDealPersonIds, setSelectedDealPersonIds] = useState([]);
+  const [dealMessage, setDealMessage] = useState('');
+  const [dealChannel, setDealChannel] = useState('linkedin');
+  const [dealSubject, setDealSubject] = useState('');
+  const [sendingDealMessage, setSendingDealMessage] = useState(false);
+
   // Load all campaigns
   const loadAllCampaigns = async () => {
     setLoading(true);
@@ -102,6 +113,72 @@ export function MarketingCampaignsPage() {
   useEffect(() => {
     loadAllCampaigns();
   }, [agentId]);
+
+  // --- Deal messaging tab ---
+  const loadDealPeople = async (stage) => {
+    setLoadingDealPeople(true);
+    const result = await crmService.getDealPeople(stage);
+    if (result.success) {
+      const people = result.people || [];
+      setDealPeople(people);
+      setSelectedDealPersonIds(people.map((p) => p._id));
+    } else {
+      showToast(result.error || 'Failed to load people with deals', 'error');
+      setDealPeople([]);
+      setSelectedDealPersonIds([]);
+    }
+    setLoadingDealPeople(false);
+  };
+
+  const handleDealStageChange = (stage) => {
+    setDealStage(stage);
+    loadDealPeople(stage);
+  };
+
+  const toggleDealPerson = (personId) => {
+    setSelectedDealPersonIds((prev) =>
+      prev.includes(personId) ? prev.filter((id) => id !== personId) : [...prev, personId]
+    );
+  };
+
+  const handleSendDealMessage = async () => {
+    if (selectedDealPersonIds.length === 0) {
+      showToast('Please select at least one person', 'error');
+      return;
+    }
+    if (!dealMessage.trim()) {
+      showToast('Please write a message', 'error');
+      return;
+    }
+    if (dealChannel === 'email' && !dealSubject.trim()) {
+      showToast('Please write a subject for the email', 'error');
+      return;
+    }
+    setSendingDealMessage(true);
+    const result = await campaignsService.sendToDealContacts({
+      agentId,
+      personIds: selectedDealPersonIds,
+      message: dealMessage,
+      channel: dealChannel,
+      subject: dealSubject
+    });
+    setSendingDealMessage(false);
+    if (result.success) {
+      showToast(
+        `Queued ${result.enqueued} message(s)${result.skipped ? ` · ${result.skipped} skipped` : ''}`,
+        'success'
+      );
+    } else {
+      showToast(result.error || 'Failed to send messages', 'error');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'dealmessage' && dealPeople.length === 0 && !loadingDealPeople) {
+      loadDealPeople(dealStage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const getStatusClass = (status) => {
     const classes = {
@@ -927,6 +1004,157 @@ const handleSearchInfluencers = async () => {
   );
 };
 
+  const renderDealMessageTab = () => {
+    const stageOptions = [
+      { value: 'all', label: 'All stages' },
+      { value: 'lead', label: 'Lead' },
+      { value: 'discovery', label: 'Discovery' },
+      { value: 'proposal', label: 'Proposal' },
+      { value: 'closed_won', label: 'Closed Won' },
+      { value: 'closed_lost', label: 'Closed Lost' },
+      { value: 'archived', label: 'Archived' }
+    ];
+
+    return (
+      <div className="space-y-4">
+        {/* Stage filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Deal stage</label>
+          <select
+            value={dealStage}
+            onChange={(e) => handleDealStageChange(e.target.value)}
+            className="input"
+          >
+            {stageOptions.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Person list */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              {loadingDealPeople
+                ? 'Loading…'
+                : `${dealPeople.length} people · ${selectedDealPersonIds.length} selected`}
+            </span>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedDealPersonIds(dealPeople.map((p) => p._id))}
+                className="text-xs text-primary-600 hover:underline"
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDealPersonIds([])}
+                className="text-xs text-gray-500 hover:underline"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          {loadingDealPeople ? (
+            <div className="py-8 text-center text-gray-500">Loading people…</div>
+          ) : dealPeople.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">No people with deals in this stage.</div>
+          ) : (
+            <div className="border border-gray-100 rounded-lg max-h-80 overflow-y-auto">
+              {dealPeople.map((person) => {
+                const dealStages = (person.deals || []).map((d) => d.stage);
+                return (
+                  <div key={person._id} className="flex items-center gap-3 p-3 border-b border-gray-100 hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={selectedDealPersonIds.includes(person._id)}
+                      onChange={() => toggleDealPerson(person._id)}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800">
+                        {person.fullName || `${person.firstName || ''} ${person.lastName || ''}`.trim()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {[person.title, person.companyName].filter(Boolean).join(' · ')}
+                      </div>
+                      {dealStages.length > 0 && (
+                        <div className="text-xs text-gray-400 mt-0.5">{dealStages.join(', ')}</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Channel + message */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
+            <div className="flex gap-2">
+              {['linkedin', 'email'].map((ch) => (
+                <button
+                  key={ch}
+                  type="button"
+                  onClick={() => setDealChannel(ch)}
+                  className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
+                    dealChannel === ch
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {ch === 'linkedin' ? 'LinkedIn' : 'Email'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {dealChannel === 'email' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+              <input
+                type="text"
+                value={dealSubject}
+                onChange={(e) => setDealSubject(e.target.value)}
+                className="input"
+                placeholder="Email subject"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Message
+              <span className="text-xs text-gray-400 font-normal ml-2">
+                Use {'{name}'}, {'{title}'}, {'{company}'} for personalization
+              </span>
+            </label>
+            <textarea
+              value={dealMessage}
+              onChange={(e) => setDealMessage(e.target.value)}
+              rows={5}
+              className="input"
+              placeholder="Write your message…"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSendDealMessage}
+            disabled={sendingDealMessage}
+            className="btn-primary w-full"
+          >
+            {sendingDealMessage ? 'Sending…' : `Send to ${selectedDealPersonIds.length} selected`}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -969,7 +1197,8 @@ const handleSearchInfluencers = async () => {
             { id: 'keyword', label: '🔍 Keyword Search' },
             { id: 'influencer', label: '👥 Influencer Following' },
             { id: 'commentreply', label: '💬 Comment Reply' },
-            { id: 'marketconnections', label: '🔗 Message to Connections' }
+            { id: 'marketconnections', label: '🔗 Message to Connections' },
+            { id: 'dealmessage', label: '📩 Message to Deal Contacts' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -991,6 +1220,7 @@ const handleSearchInfluencers = async () => {
       {activeTab === 'influencer' && renderInfluencerCampaigns()}
       {activeTab === 'commentreply' && renderCommentReplyCampaigns()}
       {activeTab === 'marketconnections' && renderMarketConnectionsCampaigns()}
+      {activeTab === 'dealmessage' && renderDealMessageTab()}
 
       {/* ===================================================== */}
       {/* KEYWORD CAMPAIGN MODAL */}

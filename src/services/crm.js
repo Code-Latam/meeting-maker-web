@@ -18,6 +18,23 @@ export const crmService = {
     }
   },
 
+  // Get people who have a deal in a given stage (or all stages)
+  async getDealPeople(stage = 'all') {
+    try {
+      const response = await api.get('/people/with-deals', { params: { stage } });
+      return {
+        success: true,
+        people: response.data.people || [],
+        stats: response.data.stats || {}
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to load people with deals'
+      };
+    }
+  },
+
   // Update person type
   async updatePersonType(personId, personType) {
     try {
