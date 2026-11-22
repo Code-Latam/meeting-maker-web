@@ -44,6 +44,39 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
   const [dealTypes, setDealTypes] = useState([]);
   const [messageChannel, setMessageChannel] = useState('all');
 
+  // Compose message state
+  const [composeChannel, setComposeChannel] = useState('linkedin');
+  const [composeText, setComposeText] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messagesRefreshKey, setMessagesRefreshKey] = useState(0);
+
+  const handleSendMessage = async () => {
+    if (!composeText.trim()) {
+      showToast('Please write a message', 'error');
+      return;
+    }
+    if (composeChannel === 'email' && !composeSubject.trim()) {
+      showToast('Please write a subject', 'error');
+      return;
+    }
+    setSendingMessage(true);
+    const result = await crmService.sendPersonMessage(personId, {
+      channel: composeChannel,
+      text: composeText,
+      subject: composeSubject
+    });
+    setSendingMessage(false);
+    if (result.success) {
+      showToast('Message sent', 'success');
+      setComposeText('');
+      setComposeSubject('');
+      setMessagesRefreshKey((k) => k + 1);
+    } else {
+      showToast(result.error || 'Failed to send message', 'error');
+    }
+  };
+
   // Form states
   const [personType, setPersonType] = useState('prospect');
   const [assignedAgentId, setAssignedAgentId] = useState('');
@@ -948,7 +981,53 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
               </div>
             </div>
             {personId ? (
-              <MessageList personId={personId} channel={messageChannel} />
+              <>
+                <MessageList key={messagesRefreshKey} personId={personId} channel={messageChannel} />
+
+                {/* Compose box */}
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <div className="flex gap-1 mb-2">
+                    {['linkedin', 'email'].map((ch) => (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() => setComposeChannel(ch)}
+                        className={`px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px] ${
+                          composeChannel === ch
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {ch === 'linkedin' ? '🔗 LinkedIn' : '📧 Email'}
+                      </button>
+                    ))}
+                  </div>
+                  {composeChannel === 'email' && (
+                    <input
+                      type="text"
+                      value={composeSubject}
+                      onChange={(e) => setComposeSubject(e.target.value)}
+                      placeholder="Subject"
+                      className="input mb-2"
+                    />
+                  )}
+                  <textarea
+                    value={composeText}
+                    onChange={(e) => setComposeText(e.target.value)}
+                    rows={3}
+                    placeholder={`Write a ${composeChannel === 'linkedin' ? 'LinkedIn' : 'email'} message…`}
+                    className="input mb-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendMessage}
+                    disabled={sendingMessage}
+                    className="btn-primary w-full"
+                  >
+                    {sendingMessage ? 'Sending…' : `Send ${composeChannel === 'linkedin' ? 'LinkedIn' : 'Email'} message`}
+                  </button>
+                </div>
+              </>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <p>Loading messages...</p>

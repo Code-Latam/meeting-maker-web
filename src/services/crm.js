@@ -35,6 +35,19 @@ export const crmService = {
     }
   },
 
+  // Send a manual message to a person (LinkedIn or Email)
+  async sendPersonMessage(personId, data) {
+    try {
+      const response = await api.post(`/people/${personId}/send-message`, data);
+      return { success: true, ...response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to send message'
+      };
+    }
+  },
+
   // Update person type
   async updatePersonType(personId, personType) {
     try {
