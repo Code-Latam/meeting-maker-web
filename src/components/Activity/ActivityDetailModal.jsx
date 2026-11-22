@@ -982,10 +982,8 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
             </div>
             {personId ? (
               <>
-                <MessageList key={messagesRefreshKey} personId={personId} channel={messageChannel} />
-
-                {/* Compose box */}
-                <div className="border-t border-gray-200 pt-3 mt-3">
+                {/* Compose box (on top) */}
+                <div className="border-b border-gray-200 pb-3 mb-3">
                   <div className="flex gap-1 mb-2">
                     {['linkedin', 'email'].map((ch) => (
                       <button
@@ -1018,15 +1016,19 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
                     placeholder={`Write a ${composeChannel === 'linkedin' ? 'LinkedIn' : 'email'} message…`}
                     className="input mb-2"
                   />
-                  <button
-                    type="button"
-                    onClick={handleSendMessage}
-                    disabled={sendingMessage}
-                    className="btn-primary w-full"
-                  >
-                    {sendingMessage ? 'Sending…' : `Send ${composeChannel === 'linkedin' ? 'LinkedIn' : 'Email'} message`}
-                  </button>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSendMessage}
+                      disabled={sendingMessage}
+                      className="btn-primary text-sm px-3 py-2"
+                    >
+                      {sendingMessage ? 'Sending…' : 'Send'}
+                    </button>
+                  </div>
                 </div>
+
+                <MessageList key={messagesRefreshKey} personId={personId} channel={messageChannel} />
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
