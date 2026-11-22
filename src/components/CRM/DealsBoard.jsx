@@ -301,7 +301,7 @@ export default function DealsBoard() {
         className={`bg-white rounded-lg border border-gray-200 p-3 mb-2 shadow-sm hover:shadow-md transition-all cursor-pointer touch-manipulation ${
           locked ? 'opacity-60 border-red-200' : 'hover:border-primary-300 active:scale-[0.98]'
         }`}
-        onClick={() => !locked && handleEditDeal(deal)}
+        onClick={(e) => handleViewDetails(e, deal)}
       >
         <div className="font-semibold text-sm sm:text-base text-gray-800 flex items-center gap-2">
           {deal.name || 'Untitled'}
@@ -339,11 +339,11 @@ export default function DealsBoard() {
           {getMoveButtons(stageKey, deal._id)}
           <button
             type="button"
-            onClick={(e) => handleViewDetails(e, deal)}
+            onClick={() => !locked && handleEditDeal(deal)}
             className="px-2 py-1 text-xs sm:text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors cursor-pointer min-h-[36px] whitespace-nowrap"
-            title="View person details"
+            title="Edit deal"
           >
-            📋 Details
+            📋 Edit
           </button>
           {stageKey === 'closed_lost' && (
             <button
