@@ -265,14 +265,26 @@ export function AgentCampaignsPage() {
       }
     };
 
-    const result = await campaignsService.createSearchCampaign(data);
+    const isEditing = Boolean(editingCampaign);
+    const result = isEditing
+      ? await campaignsService.updateSearchCampaign(editingCampaign._id, {
+          name: data.name,
+          channel: data.channel,
+          dailyLimit: data.dailyLimit,
+          schedule: data.schedule,
+          searchCriteria: data.searchCriteria,
+          icpCriteria: data.icpCriteria
+        })
+      : await campaignsService.createSearchCampaign(data);
+
     if (result.success) {
-      showToast('Campaign created successfully', 'success');
+      showToast(isEditing ? 'Campaign updated successfully' : 'Campaign created successfully', 'success');
       setIsModalOpen(false);
       resetSearchForm();
+      setEditingCampaign(null);
       await loadSearchCampaigns();
     } else {
-      showToast(result.error || 'Failed to create campaign', 'error');
+      showToast(result.error || 'Failed to save campaign', 'error');
     }
   };
 
@@ -295,6 +307,32 @@ export function AgentCampaignsPage() {
       headcount: [],
       minConnections: 0
     });
+  };
+
+  const handleSearchEdit = (campaign) => {
+    const criteria = campaign.searchCriteria || {};
+    const activeHours = campaign.schedule?.activeHours || {};
+    setEditingCampaign(campaign);
+    setModalType('search');
+    setSearchFormData({
+      name: campaign.name || '',
+      channel: campaign.channel || 'linkedin',
+      dailyLimit: campaign.dailyLimit || 30,
+      keywords: (criteria.keywords || []).join(', '),
+      titles: (criteria.titles || []).join(', '),
+      connectionDegree: String(criteria.connectionDegree || 2),
+      activeStart: activeHours.start ?? 8,
+      activeEnd: activeHours.end ?? 18,
+      minConfidence: campaign.icpCriteria?.minConfidence ?? 0.6,
+      openToWork: Boolean(criteria.openToWork),
+      hiring: Boolean(criteria.hiring),
+      openToWorkOptions: criteria.openToWorkOptions || [],
+      locations: criteria.locations || [],
+      industries: criteria.industries || [],
+      headcount: criteria.headcount || [],
+      minConnections: criteria.minConnections || 0
+    });
+    setIsModalOpen(true);
   };
 
   // =====================================================
@@ -807,6 +845,12 @@ export function AgentCampaignsPage() {
 
               <div className="mt-3 flex gap-2 justify-end">
                 <button
+                  onClick={() => handleSearchEdit(campaign)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  ✏️ Edit
+                </button>
+                <button
                   onClick={() => handleToggle(campaign._id, campaign.status)}
                   className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
@@ -1151,8 +1195,8 @@ export function AgentCampaignsPage() {
       {/* ===================================================== */}
       <Modal
         isOpen={isModalOpen && modalType === 'search'}
-        onClose={() => { setIsModalOpen(false); resetSearchForm(); }}
-        title="Create Search Campaign"
+        onClose={() => { setIsModalOpen(false); resetSearchForm(); setEditingCampaign(null); }}
+        title={editingCampaign ? 'Edit Search Campaign' : 'Create Search Campaign'}
         maxWidth="lg"
       >
         <form onSubmit={handleSearchSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -1403,13 +1447,20 @@ export function AgentCampaignsPage() {
             <p className="text-xs text-gray-500 mt-1">Find companies that are actively hiring</p>
           </div>
 
+          {editingCampaign && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+              ⚠️ Saving new search criteria restarts the search from the beginning — the
+              pagination cursor and the empty-results counter are reset.
+            </p>
+          )}
+
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button type="submit" className="flex-1 btn-primary">
-              Create Campaign
+              {editingCampaign ? 'Save Changes' : 'Create Campaign'}
             </button>
             <button
               type="button"
-              onClick={() => { setIsModalOpen(false); resetSearchForm(); }}
+              onClick={() => { setIsModalOpen(false); resetSearchForm(); setEditingCampaign(null); }}
               className="btn-secondary"
             >
               Cancel
