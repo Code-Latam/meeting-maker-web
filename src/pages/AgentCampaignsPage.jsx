@@ -477,7 +477,10 @@ export function AgentCampaignsPage() {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active';
     const result = await campaignsService.updateSearchCampaign(campaignId, { status: newStatus });
     if (result.success) {
-      showToast(`Campaign ${newStatus === 'active' ? 'resumed' : 'paused'}`, 'success');
+      const label = newStatus === 'active'
+        ? (currentStatus === 'completed' || currentStatus === 'archived' ? 're-run' : 'resumed')
+        : 'paused';
+      showToast(`Campaign ${label}`, 'success');
       await loadSearchCampaigns();
     } else {
       showToast(result.error || 'Failed to update campaign', 'error');
@@ -525,6 +528,14 @@ export function AgentCampaignsPage() {
       'archived': 'bg-gray-100 text-gray-500'
     };
     return classes[status] || 'bg-gray-100 text-gray-700';
+  };
+
+  const formatCompletedReason = (reason) => {
+    const streakMatch = /^empty_page_streak_(\d+)$/.exec(reason || '');
+    if (streakMatch) {
+      return `Search ended after ${streakMatch[1]} consecutive empty pages — no people matched in the account's network. Use Re-run to try again.`;
+    }
+    return `Completed: ${reason || 'reason unknown'}`;
   };
 
   // =====================================================
@@ -712,6 +723,11 @@ export function AgentCampaignsPage() {
                   <span className="ml-2 text-xs text-gray-500">
                     {campaign.channel === 'email' ? '📧 Email' : '🔗 LinkedIn'}
                   </span>
+                  {campaign.completedReason && (
+                    <div className="mt-1 text-xs text-amber-600" title={campaign.completedReason}>
+                      ⚠️ {formatCompletedReason(campaign.completedReason)}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -794,7 +810,7 @@ export function AgentCampaignsPage() {
                   onClick={() => handleToggle(campaign._id, campaign.status)}
                   className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  {campaign.status === 'active' ? '⏸️ Pause' : campaign.status === 'paused' ? '▶️ Resume' : '✅ Activate'}
+                  {campaign.status === 'active' ? '⏸️ Pause' : campaign.status === 'paused' ? '▶️ Resume' : campaign.status === 'completed' ? '🔄 Re-run' : '✅ Activate'}
                 </button>
                 <button
                   onClick={() => handleDelete(campaign._id)}
