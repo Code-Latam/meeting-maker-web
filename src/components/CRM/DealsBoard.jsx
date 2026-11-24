@@ -511,6 +511,7 @@ export default function DealsBoard() {
         onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedPersonActivity(null);
+          loadDeals();
         }}
       />
 
