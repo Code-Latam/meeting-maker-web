@@ -21,12 +21,14 @@ export function AgentCampaignsPage() {
   const [aiFormData, setAiFormData] = useState({
     name: '',
     dailyLimit: 10,
-    channel: 'linkedin'
+    channel: 'linkedin',
+    targetLocations: []
   });
   const [aiEditFormData, setAiEditFormData] = useState({
     name: '',
     dailyLimit: 10,
-    channel: 'linkedin'
+    channel: 'linkedin',
+    targetLocations: []
   });
 
   // Search + Post campaigns
@@ -402,8 +404,26 @@ export function AgentCampaignsPage() {
     setAiEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAiLocationToggle = (title) => {
+    setAiFormData(prev => {
+      const current = prev.targetLocations || [];
+      return current.includes(title)
+        ? { ...prev, targetLocations: current.filter(t => t !== title) }
+        : { ...prev, targetLocations: [...current, title] };
+    });
+  };
+
+  const handleAiEditLocationToggle = (title) => {
+    setAiEditFormData(prev => {
+      const current = prev.targetLocations || [];
+      return current.includes(title)
+        ? { ...prev, targetLocations: current.filter(t => t !== title) }
+        : { ...prev, targetLocations: [...current, title] };
+    });
+  };
+
   const resetAiForm = () => {
-    setAiFormData({ name: '', dailyLimit: 10, channel: 'linkedin' });
+    setAiFormData({ name: '', dailyLimit: 10, channel: 'linkedin', targetLocations: [] });
   };
 
   const handleAiCreate = async (e) => {
@@ -424,7 +444,8 @@ export function AgentCampaignsPage() {
       agentId,
       name: aiFormData.name.trim(),
       dailyLimit: limit,
-      channel: aiFormData.channel
+      channel: aiFormData.channel,
+      targetLocations: aiFormData.targetLocations || []
     });
 
     if (result.success) {
@@ -442,7 +463,8 @@ export function AgentCampaignsPage() {
     setAiEditFormData({
       name: aiCampaign.name,
       dailyLimit: aiCampaign.dailyLimit,
-      channel: aiCampaign.channel || 'linkedin'
+      channel: aiCampaign.channel || 'linkedin',
+      targetLocations: aiCampaign.targetLocations || []
     });
     setIsAiEditModalOpen(true);
   };
@@ -465,12 +487,14 @@ export function AgentCampaignsPage() {
     }
 
     const selectedChannel = aiEditFormData.channel || 'linkedin';
+    const selectedLocations = aiEditFormData.targetLocations || [];
 
     // If nothing changed, just close the modal
     if (
       trimmedName === aiCampaign.name &&
       limit === aiCampaign.dailyLimit &&
-      selectedChannel === (aiCampaign.channel || 'linkedin')
+      selectedChannel === (aiCampaign.channel || 'linkedin') &&
+      JSON.stringify(selectedLocations) === JSON.stringify(aiCampaign.targetLocations || [])
     ) {
       setIsAiEditModalOpen(false);
       return;
@@ -479,7 +503,8 @@ export function AgentCampaignsPage() {
     const result = await campaignsService.updateAiCampaign(aiCampaign._id, {
       name: trimmedName,
       dailyLimit: limit,
-      channel: selectedChannel
+      channel: selectedChannel,
+      targetLocations: selectedLocations
     });
 
     if (result.success) {
@@ -600,7 +625,7 @@ export function AgentCampaignsPage() {
           </p>
           <button
             onClick={() => {
-              setAiFormData({ name: 'AI Campaign', dailyLimit: 10, channel: 'linkedin' });
+              setAiFormData({ name: 'AI Campaign', dailyLimit: 10, channel: 'linkedin', targetLocations: [] });
               setIsAiModalOpen(true);
             }}
             className="btn-primary text-sm"
@@ -634,6 +659,11 @@ export function AgentCampaignsPage() {
               </span>
               <span className="text-xs text-gray-400">· AI-driven campaign</span>
             </div>
+            <p className="mt-1 text-xs text-gray-500">
+              🌎 {(aiCampaign.targetLocations || []).length > 0
+                ? aiCampaign.targetLocations.join(', ')
+                : 'All countries'}
+            </p>
           </div>
 
           <div className="text-right">
@@ -978,7 +1008,7 @@ export function AgentCampaignsPage() {
           <button
             onClick={() => {
               if (activeTab === 'ai') {
-                setAiFormData({ name: 'AI Campaign', dailyLimit: 10, channel: 'linkedin' });
+                setAiFormData({ name: 'AI Campaign', dailyLimit: 10, channel: 'linkedin', targetLocations: [] });
                 setIsAiModalOpen(true);
               } else {
                 setModalType(activeTab === 'search' ? 'search' : 'post');
@@ -1101,6 +1131,35 @@ export function AgentCampaignsPage() {
             </p>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Target Countries
+            </label>
+            <div className="border border-gray-300 rounded-lg p-2 max-h-32 overflow-y-auto">
+              {locations.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading locations...</p>
+              ) : (
+                locations.map((loc) => {
+                  const title = loc.title || loc.name;
+                  return (
+                    <label key={loc.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(aiFormData.targetLocations || []).includes(title)}
+                        onChange={() => handleAiLocationToggle(title)}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">{title}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to include people from all countries.
+            </p>
+          </div>
+
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button type="submit" className="flex-1 btn-primary">
               Create AI Campaign
@@ -1172,6 +1231,35 @@ export function AgentCampaignsPage() {
             />
             <p className="text-xs text-gray-500 mt-1">
               Maximum leads the AI campaign can add to Meeting Maker per day.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Target Countries
+            </label>
+            <div className="border border-gray-300 rounded-lg p-2 max-h-32 overflow-y-auto">
+              {locations.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading locations...</p>
+              ) : (
+                locations.map((loc) => {
+                  const title = loc.title || loc.name;
+                  return (
+                    <label key={loc.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(aiEditFormData.targetLocations || []).includes(title)}
+                        onChange={() => handleAiEditLocationToggle(title)}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">{title}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to include people from all countries.
             </p>
           </div>
 
