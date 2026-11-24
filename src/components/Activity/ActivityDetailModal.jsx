@@ -241,9 +241,9 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
           const mergedPerson = {
             ...personData,
             ...p,
-            assignedAgentId: personData.assignedAgentId || p.assignedAgentId,
-            groupId: personData.groupId || p.groupId,
-            group: personData.group || p.group,
+            assignedAgentId: p.assignedAgentId ?? personData.assignedAgentId,
+            groupId: p.groupId ?? personData.groupId,
+            group: p.group ?? personData.group,
           };
           setPerson(mergedPerson);
 
@@ -321,8 +321,8 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
         }
       }
 
-      // Get deals for this person
-      if (deals.length === 0 && id) {
+      // Get deals for this person (always refetch so edits/tasks reflect immediately)
+      if (id) {
         const dealsResult = await crmService.getDealsForPerson(id);
         if (dealsResult.success) {
           setDeals(dealsResult.deals || []);
@@ -335,7 +335,7 @@ export function ActivityDetailModal({ isOpen, activity, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [activity, showToast, agents.length, dealTypes.length, deals.length, groupId]);
+  }, [activity, showToast, agents.length, dealTypes.length, groupId]);
 
   useEffect(() => {
     if (isOpen && activity) {
