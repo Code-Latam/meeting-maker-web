@@ -442,10 +442,6 @@ export function MarketingCampaignsPage() {
       showToast('Campaign name is required', 'error');
       return;
     }
-    if (keywords.length === 0) {
-      showToast('At least one keyword is required', 'error');
-      return;
-    }
     if (!marketConnectionsForm.messageTemplate) {
       showToast('Message template is required', 'error');
       return;
@@ -529,10 +525,6 @@ export function MarketingCampaignsPage() {
 
     if (!marketConnectionsForm.name) {
       showToast('Campaign name is required', 'error');
-      return;
-    }
-    if (keywords.length === 0) {
-      showToast('At least one keyword is required', 'error');
       return;
     }
     if (!marketConnectionsForm.messageTemplate) {
@@ -928,6 +920,12 @@ const handleSearchInfluencers = async () => {
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {(!campaign.keywords || campaign.keywords.length === 0) && (
+            <div className="mt-2">
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🎯 All connections</span>
             </div>
           )}
 
@@ -1511,7 +1509,7 @@ const handleSearchInfluencers = async () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Keywords for People Search *
+              Keywords for People Search (optional)
             </label>
             <input
               type="text"
@@ -1520,7 +1518,7 @@ const handleSearchInfluencers = async () => {
               className="input"
               placeholder="e.g., CEO, Founder, Marketing Director, Sales"
             />
-            <p className="text-xs text-gray-500 mt-1">Separate keywords with commas. These will be used to search your first-level connections.</p>
+            <p className="text-xs text-gray-500 mt-1">Separate keywords with commas to target specific people. Leave empty to target all your first-level connections.</p>
           </div>
 
           <div>
@@ -1572,7 +1570,7 @@ const handleSearchInfluencers = async () => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-800">📌 How it works:</p>
             <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
-              <li>Searches your first-level connections using the keywords provided</li>
+              <li>Searches your first-level connections using the keywords provided (or all connections if none are set)</li>
               <li>Only sends to people who haven't received a message in this campaign before</li>
               <li>Respects LinkedIn's daily messaging limits</li>
               <li>Processes once per day with up to your daily limit</li>
